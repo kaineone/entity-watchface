@@ -2,6 +2,9 @@
 
 Entity is a watchface for the Pebble Time 2 and the Pebble Round 2.
 
+It isn't in the Pebble appstore yet. Once it's finished and we've tried it on real watches, you'll
+be able to install it straight from the Pebble app on your phone, and a link will go here.
+
 Most of the screen is the time, set in big Zen Dots numerals with the hour sitting above the
 minute. Along the bottom is a row of bars that shows whether your watch can reach your phone.
 While it can, a red bar scans side to side with a little orange trail behind it. If the
@@ -20,26 +23,20 @@ isn't earning its keep. That happens when your battery gets low (20% unless you 
 number in the settings), during quiet time, while a timeline peek covers the screen, or any time
 you switch the animation off.
 
-## Building it yourself
-
-You'll need the Pebble tool and SDK 4.33.1:
-
-```sh
-uv tool install pebble-tool
-pebble sdk install 4.33.1
-```
-
-Then build it and try it in the emulator:
-
-```sh
-pebble build
-pebble install --emulator emery --vnc
-```
-
-There are a few unit tests for the formatting and drawing logic. Run them with
-`make -C tests/host`.
-
 ## Fonts
 
 Zen Dots is by The Dots Project Authors and JetBrains Mono is by JetBrains. Both are under the
 SIL Open Font License 1.1, and you'll find the license texts in `resources/fonts/`.
+
+## Development
+
+To build it you need the Pebble tool and SDK 4.33.1:
+
+```sh
+uv tool install pebble-tool
+pebble sdk install 4.33.1
+pebble build
+pebble install --emulator emery --vnc
+```
+
+`make -C tests/host` runs the unit tests for the formatting and drawing logic.
