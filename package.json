@@ -1,0 +1,25 @@
+{
+  "name": "entity-watchface",
+  "author": "kaineone",
+  "version": "0.1.0",
+  "keywords": ["pebble-app"],
+  "private": true,
+  "dependencies": {},
+  "pebble": {
+    "displayName": "Entity",
+    "uuid": "310cef49-a859-4395-84f2-f2eb4b28841d",
+    "sdkVersion": "3",
+    "enableMultiJS": true,
+    "targetPlatforms": ["emery", "gabbro"],
+    "watchapp": { "watchface": true },
+    "messageKeys": [],
+    "resources": {
+      "media": [
+        { "type": "font", "name": "ZEN_64", "file": "fonts/ZenDots-Regular.ttf", "characterRegex": "[0-9]" },
+        { "type": "font", "name": "ZEN_60", "file": "fonts/ZenDots-Regular.ttf", "characterRegex": "[0-9]" },
+        { "type": "font", "name": "ZEN_48", "file": "fonts/ZenDots-Regular.ttf", "characterRegex": "[0-9]" },
+        { "type": "font", "name": "LABEL_16", "file": "fonts/JetBrainsMono-Medium.ttf", "characterRegex": "[a-z0-9 .°%+~]" }
+      ]
+    }
+  }
+}

@@ -3,8 +3,8 @@
 A watchface for the Pebble Time 2 and the Pebble Round 2.
 
 The hour sits above the minute in Zen Dots. Under them, 21 bars track the watch's Bluetooth
-link to your phone. While connected, a red cursor sweeps the bars four times a second and
-leaves a short orange trail. When the link drops, the bars go flat and grey. The top row shows
+link to your phone. While connected, a red cursor steps one bar every quarter second, so it
+crosses all 21 in five seconds before turning back, and leaves a short orange trail. When the link drops, the bars go flat and grey. The top row shows
 the date and weather. Tap the watch and it switches to steps and heart rate for ten seconds.
 
 On the Round 2 the bars become 60 ticks around the rim, and the cursor moves once per second.
