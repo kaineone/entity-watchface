@@ -1,0 +1,46 @@
+name: build
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: astral-sh/setup-uv@v6
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - uses: actions/cache@v4
+        with:
+          path: ~/.local/share/pebble-sdk
+          key: pebble-sdk-4.33.1-${{ runner.os }}
+
+      - name: Install pebble tool
+        run: |
+          uv tool install pebble-tool --python 3.13
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+
+      - name: Install/activate Pebble SDK
+        run: |
+          yes | pebble sdk install 4.33.1 || pebble sdk activate 4.33.1
+          pebble sdk list
+
+      - name: Build watchface
+        run: pebble build
+
+      - name: Run host tests
+        run: make -C tests/host
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: entity-pbw
+          path: build/*.pbw
