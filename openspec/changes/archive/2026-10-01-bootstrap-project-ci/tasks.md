@@ -14,7 +14,7 @@
 ## 3. CI
 
 - [x] 3.1 `.github/workflows/build.yml`: checkout, uv, pebble-tool, SDK 4.33.1 (cached), `pebble build`, `make -C tests/host`, upload `.pbw`
-- [ ] 3.2 CI green on the PR
+- [x] 3.2 CI green on the PR
 
 ## 4. Docs
 

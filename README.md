@@ -1,39 +1,45 @@
 # Entity
 
-A watchface for the Pebble Time 2 and the Pebble Round 2.
+Entity is a watchface for the Pebble Time 2 and the Pebble Round 2.
 
-The hour sits above the minute in Zen Dots. Under them, 21 bars track the watch's Bluetooth
-link to your phone. While connected, a red cursor steps one bar every quarter second, so it
-crosses all 21 in five seconds before turning back, and leaves a short orange trail. When the link drops, the bars go flat and grey. The top row shows
-the date and weather. Tap the watch and it switches to steps and heart rate for ten seconds.
+Most of the screen is the time, set in big Zen Dots numerals with the hour sitting above the
+minute. Along the bottom is a row of bars that shows whether your watch can reach your phone.
+While it can, a red bar scans side to side with a little orange trail behind it. If the
+connection drops, the bars flatten out and turn grey, so you can tell at a glance.
 
-On the Round 2 the bars become 60 ticks around the rim, and the cursor moves once per second.
+The top of the screen has the date and the weather. Tap the watch and it switches over to your
+steps and heart rate for a few seconds, then flips back.
+
+On the Round 2 the bars wrap around the edge of the screen as tick marks, and the red one
+travels around the rim.
 
 ## Battery
 
-The animation stops when the battery falls to 20% (you can change the threshold), during
-quiet time, while a timeline peek covers the screen, or if you turn it off in settings. Time
-updates once a minute. Weather is fetched by the phone every 30 minutes.
+The moving bar is the one thing here that really costs power, so Entity holds it still when it
+isn't earning its keep. That happens when your battery gets low (20% unless you pick a different
+number in the settings), during quiet time, while a timeline peek covers the screen, or any time
+you switch the animation off.
 
-## Building
+## Building it yourself
 
-Install the Pebble tool and SDK 4.33.1:
+You'll need the Pebble tool and SDK 4.33.1:
 
 ```sh
 uv tool install pebble-tool
 pebble sdk install 4.33.1
 ```
 
-Then build and run it in the emulator:
+Then build it and try it in the emulator:
 
 ```sh
 pebble build
 pebble install --emulator emery --vnc
 ```
 
-`make -C tests/host` runs the unit tests for the drawing and formatting logic on your machine.
+There are a few unit tests for the formatting and drawing logic. Run them with
+`make -C tests/host`.
 
 ## Fonts
 
-Zen Dots by The Dots Project Authors and JetBrains Mono by JetBrains, both under the SIL Open
-Font License 1.1. The license texts are in `resources/fonts/`.
+Zen Dots is by The Dots Project Authors and JetBrains Mono is by JetBrains. Both are under the
+SIL Open Font License 1.1, and you'll find the license texts in `resources/fonts/`.
