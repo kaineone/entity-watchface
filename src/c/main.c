@@ -45,6 +45,10 @@ static GFont s_font_large;
 static GFont s_font_small;
 static GFont s_font_label;
 
+static bool s_font_large_custom = false;
+static bool s_font_small_custom = false;
+static bool s_font_label_custom = false;
+
 static char s_date_buf[FMT_STEPS_LEN];
 static char s_hour_buf[FMT_HOUR_LEN];
 static char s_minute_buf[FMT_MINUTE_LEN];
@@ -55,7 +59,7 @@ static char s_weather_buf[WEATHER_TEXT_LEN > FMT_BPM_LEN ? WEATHER_TEXT_LEN : FM
 static GColor s_hour_color = PAL_HOUR_RED;
 static int8_t s_hour12_pref = -1;
 
-static int s_last_yday = -1;
+static int s_last_daykey = -1;
 static bool s_peek = false;
 static bool s_layout_applied = false;
 
@@ -164,6 +168,8 @@ static void update_weather(void) {
 }
 
 static void on_weather_received(int cond, int temp_c10) {
+  if (!weather_valid(cond, temp_c10)) return;
+
   s_wx_cond = cond;
   s_wx_temp_c10 = temp_c10;
   s_wx_time = (int32_t)time(NULL);
@@ -255,15 +261,18 @@ static void update_time(struct tm *tick_time) {
   }
 
   bool date_changed = false;
-  if (!s_swapped && tick_time->tm_yday != s_last_yday) {
-    char dt[FMT_DATE_LEN];
-    fmt_date(dt, sizeof(dt), tick_time->tm_wday, tick_time->tm_mday, tick_time->tm_mon);
-    if (strcmp(s_date_buf, dt) != 0) {
-      strcpy(s_date_buf, dt);
-      if (s_date_layer) text_layer_set_text(s_date_layer, s_date_buf);
-      date_changed = true;
+  if (!s_swapped) {
+    int daykey = tick_time->tm_year * 400 + tick_time->tm_yday;
+    if (daykey != s_last_daykey) {
+      char dt[FMT_DATE_LEN];
+      fmt_date(dt, sizeof(dt), tick_time->tm_wday, tick_time->tm_mday, tick_time->tm_mon);
+      if (strcmp(s_date_buf, dt) != 0) {
+        strcpy(s_date_buf, dt);
+        if (s_date_layer) text_layer_set_text(s_date_layer, s_date_buf);
+        date_changed = true;
+      }
+      s_last_daykey = daykey;
     }
-    s_last_yday = tick_time->tm_yday;
   }
   if (date_changed) update_weather();
 }
@@ -271,8 +280,6 @@ static void update_time(struct tm *tick_time) {
 static void tick_handler(struct tm *tick_time, TimeUnits units_changed) {
   if (units_changed & MINUTE_UNIT) {
     update_time(tick_time);
-    s_quiet = quiet_time_is_active();
-    quiet_layer_set_visible(s_quiet);
     meter_refresh();
     update_weather();
   }
@@ -390,6 +397,9 @@ static void meter_timer_cb(void *data) {
 #endif
 
 static void meter_refresh(void) {
+  s_quiet = quiet_time_is_active();
+  quiet_layer_set_visible(s_quiet);
+
   MeterMode mode = meter_mode(s_linked, s_animate_pref, s_battery_pct,
                               s_battery_threshold, s_charging, s_quiet, s_peek);
   s_meter_mode = mode;
@@ -483,7 +493,7 @@ static void swap_out(void) {
   }
   s_swapped = false;
   s_date_buf[0] = '\0';
-  s_last_yday = -1;
+  s_last_daykey = -1;
   s_weather_buf[0] = '\0';
   s_wx_color_set = false;
   time_t now = time(NULL);
@@ -494,6 +504,7 @@ static void swap_out(void) {
 static void handle_tap(AccelAxisType axis, int32_t direction) {
   (void)axis;
   (void)direction;
+  if (!s_focused) return;
   if (!s_tap_pref) return;
   if (s_swapped) swap_out(); else swap_in();
 }
@@ -551,11 +562,39 @@ static void on_settings_changed(const Settings *s) {
 static void window_load(Window *window) {
   (void)window;
 
-  s_font_large = fonts_load_custom_font(resource_get_handle(layout_get()->font_large_res));
-  s_font_small = fonts_load_custom_font(resource_get_handle(layout_get()->font_small_res));
-  s_font_label = fonts_load_custom_font(resource_get_handle(layout_get()->label_font_res));
+  const FaceLayout *layout = layout_get();
+  ResHandle large_handle = resource_get_handle(layout->font_large_res);
+  ResHandle small_handle = resource_get_handle(layout->font_small_res);
+
+  if (layout->font_large_res == layout->font_small_res) {
+    s_font_large = fonts_load_custom_font(large_handle);
+    s_font_small = s_font_large;
+    s_font_large_custom = (s_font_large != NULL);
+    s_font_small_custom = false;
+  } else {
+    s_font_large = fonts_load_custom_font(large_handle);
+    s_font_small = fonts_load_custom_font(small_handle);
+    s_font_large_custom = (s_font_large != NULL);
+    s_font_small_custom = (s_font_small != NULL);
+  }
+
+  s_font_label = fonts_load_custom_font(resource_get_handle(layout->label_font_res));
+  s_font_label_custom = (s_font_label != NULL);
+
   if (!s_font_large || !s_font_small || !s_font_label) {
     APP_LOG(APP_LOG_LEVEL_ERROR, "font load failed");
+  }
+  if (!s_font_large) {
+    s_font_large = fonts_get_system_font(FONT_KEY_GOTHIC_24_BOLD);
+    s_font_large_custom = false;
+  }
+  if (!s_font_small) {
+    s_font_small = fonts_get_system_font(FONT_KEY_GOTHIC_24_BOLD);
+    s_font_small_custom = false;
+  }
+  if (!s_font_label) {
+    s_font_label = fonts_get_system_font(FONT_KEY_GOTHIC_14);
+    s_font_label_custom = false;
   }
 
   Layer *root = window_get_root_layer(s_window);
@@ -680,24 +719,30 @@ static void window_unload(Window *window) {
     s_minute_layer = NULL;
   }
 
-  if (s_font_large) {
+  if (s_font_large && s_font_large_custom) {
     fonts_unload_custom_font(s_font_large);
-    s_font_large = NULL;
   }
-  if (s_font_small) {
+  if (s_font_small && s_font_small_custom && s_font_small != s_font_large) {
     fonts_unload_custom_font(s_font_small);
-    s_font_small = NULL;
   }
-  if (s_font_label) {
+  if (s_font_label && s_font_label_custom) {
     fonts_unload_custom_font(s_font_label);
-    s_font_label = NULL;
   }
+  s_font_large = NULL;
+  s_font_small = NULL;
+  s_font_label = NULL;
+  s_font_large_custom = false;
+  s_font_small_custom = false;
+  s_font_label_custom = false;
 }
 
 static void load_weather_persist(void) {
   WxPersist p;
   int len = persist_read_data(WX_PERSIST_KEY, &p, sizeof(p));
-  if (len == sizeof(p) && p.version == 1) {
+  int32_t now = (int32_t)time(NULL);
+  if (len == sizeof(p) && p.version == 1 &&
+      weather_valid(p.cond, p.temp_c10) &&
+      p.time <= now + WEATHER_FUTURE_SLACK) {
     s_wx_cond = p.cond;
     s_wx_temp_c10 = p.temp_c10;
     s_wx_time = p.time;

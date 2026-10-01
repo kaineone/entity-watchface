@@ -1,5 +1,7 @@
 #include "settings.h"
 
+#include <errno.h>
+#include <limits.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -24,6 +26,21 @@ bool settings_valid(const Settings *s) {
   return true;
 }
 
+static bool parse_int_str(const char *v, int *out) {
+  if (v == NULL || *v == '\0') return false;
+  char c = *v;
+  if (c != '-' && (c < '0' || c > '9')) return false;
+  char *end = NULL;
+  errno = 0;
+  long r = strtol(v, &end, 10);
+  if (end == v) return false;
+  if (*end != '\0') return false;
+  if (errno == ERANGE) return false;
+  if (r < INT_MIN || r > INT_MAX) return false;
+  *out = (int)r;
+  return true;
+}
+
 bool settings_set_clock(Settings *s, int v) {
   if (v < -1 || v > 1) return false;
   if (s->clock == (int8_t)v) return false;
@@ -32,11 +49,9 @@ bool settings_set_clock(Settings *s, int v) {
 }
 
 bool settings_set_clock_str(Settings *s, const char *v) {
-  if (v == NULL || *v == '\0') return false;
-  char *end = NULL;
-  long r = strtol(v, &end, 10);
-  if (*end != '\0') return false;
-  return settings_set_clock(s, (int)r);
+  int r;
+  if (!parse_int_str(v, &r)) return false;
+  return settings_set_clock(s, r);
 }
 
 bool settings_set_hour_color(Settings *s, int v) {
@@ -51,11 +66,9 @@ bool settings_set_hour_color_str(Settings *s, const char *v) {
   if (strcmp(v, "red") == 0) return settings_set_hour_color(s, HOUR_RED);
   if (strcmp(v, "cream") == 0) return settings_set_hour_color(s, HOUR_CREAM);
   if (strcmp(v, "gold") == 0) return settings_set_hour_color(s, HOUR_GOLD);
-  if (*v == '\0') return false;
-  char *end = NULL;
-  long r = strtol(v, &end, 10);
-  if (*end != '\0') return false;
-  return settings_set_hour_color(s, (int)r);
+  int r;
+  if (!parse_int_str(v, &r)) return false;
+  return settings_set_hour_color(s, r);
 }
 
 bool settings_set_low_battery(Settings *s, int v) {
@@ -66,11 +79,9 @@ bool settings_set_low_battery(Settings *s, int v) {
 }
 
 bool settings_set_low_battery_str(Settings *s, const char *v) {
-  if (v == NULL || *v == '\0') return false;
-  char *end = NULL;
-  long r = strtol(v, &end, 10);
-  if (*end != '\0') return false;
-  return settings_set_low_battery(s, (int)r);
+  int r;
+  if (!parse_int_str(v, &r)) return false;
+  return settings_set_low_battery(s, r);
 }
 
 bool settings_set_bool(bool *field, int v) {
