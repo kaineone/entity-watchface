@@ -9,6 +9,9 @@ static const FaceLayout s_layout = {
     .ampm   = GRect(140, 36, 52, 16),
     .minute = GRect(8, 96, 184, 64),
     .meter  = GRect(6, 176, 189, 26),
+    .link   = GRect(8, 208, 22, 14),
+    .power  = GRect(120, 206, 72, 16),
+    .quiet  = GRect(8, 104, 8, 8),
     .digits = DIGITS_LARGE
   },
   .peek = {
@@ -17,6 +20,9 @@ static const FaceLayout s_layout = {
     .ampm   = GRect(140, 36, 52, 16),
     .minute = GRect(8, 80, 184, 48),
     .meter  = GRect(6, 176, 189, 26),
+    .link   = GRect(8, 146, 22, 14),
+    .power  = GRect(120, 144, 72, 16),
+    .quiet  = GRect(8, 104, 8, 8),
     .digits = DIGITS_SMALL
   }
 };
@@ -28,6 +34,9 @@ static const FaceLayout s_layout = {
     .ampm   = GRect(140, 36, 52, 16),
     .minute = GRect(8, 96, 184, 64),
     .meter  = GRect(6, 176, 189, 26),
+    .link   = GRect(8, 208, 22, 14),
+    .power  = GRect(120, 206, 72, 16),
+    .quiet  = GRect(8, 104, 8, 8),
     .digits = DIGITS_LARGE
   },
   .peek = {
@@ -36,6 +45,9 @@ static const FaceLayout s_layout = {
     .ampm   = GRect(140, 36, 52, 16),
     .minute = GRect(8, 80, 184, 48),
     .meter  = GRect(6, 176, 189, 26),
+    .link   = GRect(8, 146, 22, 14),
+    .power  = GRect(120, 144, 72, 16),
+    .quiet  = GRect(8, 104, 8, 8),
     .digits = DIGITS_SMALL
   }
 };
