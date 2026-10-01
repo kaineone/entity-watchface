@@ -11,7 +11,7 @@ test: $(BINS)
 		./$$t || exit $$?; \
 	done
 
-bin/%: test_%.c $(LOGIC_SRC) | bin
+bin/%: test_%.c test.h $(LOGIC_SRC) $(wildcard ../../src/c/logic/*.h) | bin
 	$(CC) $(CFLAGS) $< $(LOGIC_SRC) -o $@
 
 bin:
