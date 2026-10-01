@@ -10,6 +10,17 @@
 #include "status_layer.h"
 #include "settings_store.h"
 
+#if defined(PBL_ROUND)
+#include "rim_layer.h"
+static Layer *meter_view_create(GRect frame) { return rim_layer_create(frame); }
+static void meter_view_destroy(void) { rim_layer_destroy(); }
+static void meter_view_set_mode(MeterMode mode) { rim_layer_set_mode(mode); }
+#else
+static Layer *meter_view_create(GRect frame) { return meter_layer_create(frame); }
+static void meter_view_destroy(void) { meter_layer_destroy(); }
+static void meter_view_set_mode(MeterMode mode) { meter_layer_set_mode(mode); }
+#endif
+
 #define WX_PERSIST_KEY 2
 
 typedef struct __attribute__((__packed__)) {
@@ -71,6 +82,10 @@ static int32_t s_wx_time = 0;
 static AppTimer *s_meter_timer = NULL;
 static MeterMode s_meter_mode = MODE_FROZEN;
 
+#if defined(PBL_ROUND)
+static TimeUnits s_tick_units = MINUTE_UNIT;
+#endif
+
 static bool s_tap_pref = true;
 static bool s_swapped = false;
 static AppTimer *s_swap_timer = NULL;
@@ -100,16 +115,20 @@ static void update_weather(void) {
     stale = weather_is_stale((int32_t)time(NULL), s_wx_time, WEATHER_STALE_SECS);
 
     int date_w = s_date_layer ? text_layer_get_content_size(s_date_layer).w : 0;
-    GRect date_frame = s_date_layer ? layer_get_frame(text_layer_get_layer(s_date_layer)) : GRect(0, 0, 0, 0);
+    GRect date_frame = s_date_layer ? layer_get_frame(text_layer_get_layer(s_date_layer)) : GRectZero;
     GRect weather_frame = layer_get_frame(text_layer_get_layer(s_weather_layer));
     int max_w = weather_frame.origin.x + weather_frame.size.w - (date_frame.origin.x + date_w + 4);
 
-    for (int level = 0; level <= 2; level++) {
-      weather_text_variant(text, sizeof(text), s_wx_cond, s_wx_temp_c10, s_fahrenheit, stale, level);
-      GSize size = graphics_text_layout_get_content_size(text, s_font_label, GRect(0, 0, 200, 16),
-                                                         GTextOverflowModeTrailingEllipsis,
-                                                         GTextAlignmentRight);
-      if (size.w <= max_w) break;
+    if (date_frame.origin.y == weather_frame.origin.y) {
+      for (int level = 0; level <= 2; level++) {
+        weather_text_variant(text, sizeof(text), s_wx_cond, s_wx_temp_c10, s_fahrenheit, stale, level);
+        GSize size = graphics_text_layout_get_content_size(text, s_font_label, GRect(0, 0, 200, 16),
+                                                           GTextOverflowModeTrailingEllipsis,
+                                                           GTextAlignmentRight);
+        if (size.w <= max_w) break;
+      }
+    } else {
+      weather_text_variant(text, sizeof(text), s_wx_cond, s_wx_temp_c10, s_fahrenheit, stale, 0);
     }
   }
 
@@ -208,12 +227,18 @@ static void update_time(struct tm *tick_time) {
 }
 
 static void tick_handler(struct tm *tick_time, TimeUnits units_changed) {
-  (void)units_changed;
-  update_time(tick_time);
-  s_quiet = quiet_time_is_active();
-  quiet_layer_set_visible(s_quiet);
-  meter_refresh();
-  update_weather();
+  if (units_changed & MINUTE_UNIT) {
+    update_time(tick_time);
+    s_quiet = quiet_time_is_active();
+    quiet_layer_set_visible(s_quiet);
+    meter_refresh();
+    update_weather();
+  }
+#if defined(PBL_ROUND)
+  if (s_tick_units == SECOND_UNIT) {
+    rim_layer_set_time(tick_time->tm_min, tick_time->tm_sec);
+  }
+#endif
 }
 
 static void apply_layout(bool peek) {
@@ -223,12 +248,30 @@ static void apply_layout(bool peek) {
 
   const FaceFrames *frames = peek ? &layout_get()->peek : &layout_get()->normal;
 
-  if (s_date_layer) layer_set_frame(text_layer_get_layer(s_date_layer), frames->date);
-  if (s_hour_layer) layer_set_frame(text_layer_get_layer(s_hour_layer), frames->hour);
-  if (s_ampm_layer) layer_set_frame(text_layer_get_layer(s_ampm_layer), frames->ampm);
-  if (s_minute_layer) layer_set_frame(text_layer_get_layer(s_minute_layer), frames->minute);
-  if (s_power_layer) layer_set_frame(text_layer_get_layer(s_power_layer), frames->power);
-  if (s_weather_layer) layer_set_frame(text_layer_get_layer(s_weather_layer), frames->weather);
+  if (s_date_layer) {
+    layer_set_frame(text_layer_get_layer(s_date_layer), frames->date);
+    text_layer_set_text_alignment(s_date_layer, frames->date_align);
+  }
+  if (s_hour_layer) {
+    layer_set_frame(text_layer_get_layer(s_hour_layer), frames->hour);
+    text_layer_set_text_alignment(s_hour_layer, frames->hour_align);
+  }
+  if (s_ampm_layer) {
+    layer_set_frame(text_layer_get_layer(s_ampm_layer), frames->ampm);
+    text_layer_set_text_alignment(s_ampm_layer, frames->ampm_align);
+  }
+  if (s_minute_layer) {
+    layer_set_frame(text_layer_get_layer(s_minute_layer), frames->minute);
+    text_layer_set_text_alignment(s_minute_layer, frames->minute_align);
+  }
+  if (s_power_layer) {
+    layer_set_frame(text_layer_get_layer(s_power_layer), frames->power);
+    text_layer_set_text_alignment(s_power_layer, frames->power_align);
+  }
+  if (s_weather_layer) {
+    layer_set_frame(text_layer_get_layer(s_weather_layer), frames->weather);
+    text_layer_set_text_alignment(s_weather_layer, frames->weather_align);
+  }
   if (s_link_layer) layer_set_frame(s_link_layer, frames->link);
   if (s_quiet_layer) layer_set_frame(s_quiet_layer, frames->quiet);
 
@@ -241,7 +284,9 @@ static void apply_layout(bool peek) {
 
   if (s_meter_layer) {
     layer_set_frame(s_meter_layer, frames->meter);
-    layer_set_hidden(s_meter_layer, peek);
+    if (layout_get()->hide_meter_in_peek) {
+      layer_set_hidden(s_meter_layer, peek);
+    }
   }
 }
 
@@ -288,6 +333,7 @@ static void handle_focus(bool in_focus) {
   meter_refresh();
 }
 
+#if !defined(PBL_ROUND)
 static void meter_timer_cb(void *data) {
   (void)data;
   s_meter_timer = NULL;
@@ -296,13 +342,26 @@ static void meter_timer_cb(void *data) {
     s_meter_timer = app_timer_register(250, meter_timer_cb, NULL);
   }
 }
+#endif
 
 static void meter_refresh(void) {
   MeterMode mode = meter_mode(s_linked, s_animate_pref, s_battery_pct,
                               s_battery_threshold, s_charging, s_quiet, s_peek);
-  meter_layer_set_mode(mode);
   s_meter_mode = mode;
+  meter_view_set_mode(mode);
 
+#if defined(PBL_ROUND)
+  TimeUnits want = meter_timer_should_run(mode, s_focused) ? SECOND_UNIT : MINUTE_UNIT;
+  if (want != s_tick_units) {
+    s_tick_units = want;
+    tick_timer_service_subscribe(want, tick_handler);
+    if (want == SECOND_UNIT) {
+      time_t now = time(NULL);
+      struct tm *t = localtime(&now);
+      rim_layer_set_time(t->tm_min, t->tm_sec);
+    }
+  }
+#else
   bool run = meter_timer_should_run(mode, s_focused);
   if (run && !s_meter_timer) {
     s_meter_timer = app_timer_register(250, meter_timer_cb, NULL);
@@ -310,6 +369,7 @@ static void meter_refresh(void) {
     app_timer_cancel(s_meter_timer);
     s_meter_timer = NULL;
   }
+#endif
 }
 
 static long read_steps(void) {
@@ -441,8 +501,8 @@ static void on_settings_changed(const Settings *s) {
 static void window_load(Window *window) {
   (void)window;
 
-  s_font_large = fonts_load_custom_font(resource_get_handle(RESOURCE_ID_ZEN_64));
-  s_font_small = fonts_load_custom_font(resource_get_handle(RESOURCE_ID_ZEN_48));
+  s_font_large = fonts_load_custom_font(resource_get_handle(layout_get()->font_large_res));
+  s_font_small = fonts_load_custom_font(resource_get_handle(layout_get()->font_small_res));
   s_font_label = fonts_load_custom_font(resource_get_handle(RESOURCE_ID_LABEL_16));
   if (!s_font_large || !s_font_small || !s_font_label) {
     APP_LOG(APP_LOG_LEVEL_ERROR, "font load failed");
@@ -455,7 +515,7 @@ static void window_load(Window *window) {
   s_hour_layer = make_layer(frames->hour, GTextAlignmentLeft, s_font_large, s_hour_color);
   s_ampm_layer = make_layer(frames->ampm, GTextAlignmentRight, s_font_label, PAL_GOLD);
   s_minute_layer = make_layer(frames->minute, GTextAlignmentRight, s_font_large, PAL_GOLD);
-  s_meter_layer = meter_layer_create(frames->meter);
+  s_meter_layer = meter_view_create(frames->meter);
   s_power_layer = make_layer(frames->power, GTextAlignmentRight, s_font_label, PAL_GOLD);
   s_weather_layer = make_layer(frames->weather, GTextAlignmentRight, s_font_label, PAL_ACCENT);
   s_link_layer = link_layer_create(frames->link);
@@ -495,6 +555,9 @@ static void window_load(Window *window) {
   update_weather();
 
   tick_timer_service_subscribe(MINUTE_UNIT, tick_handler);
+#if defined(PBL_ROUND)
+  s_tick_units = MINUTE_UNIT;
+#endif
 
   unobstructed_area_service_subscribe((UnobstructedAreaHandlers) {
     .did_change = unobstructed_did_change
@@ -534,7 +597,7 @@ static void window_unload(Window *window) {
   battery_state_service_unsubscribe();
   app_focus_service_unsubscribe();
 
-  meter_layer_destroy();
+  meter_view_destroy();
   s_meter_layer = NULL;
 
   link_layer_destroy();
