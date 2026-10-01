@@ -115,13 +115,16 @@ static void test_mode_styles(void) {
 }
 
 static void test_meter_mode(void) {
-  CHECK_EQ_INT(meter_mode(false, true, 0, 0, false, false), MODE_UNLINKED);
-  CHECK_EQ_INT(meter_mode(false, true, 5, 10, false, false), MODE_UNLINKED);
-  CHECK_EQ_INT(meter_mode(true, true, 20, 20, false, false), MODE_FROZEN);
-  CHECK_EQ_INT(meter_mode(true, true, 21, 20, false, false), MODE_ANIMATING);
-  CHECK_EQ_INT(meter_mode(true, true, 100, 0, true, false), MODE_FROZEN);
-  CHECK_EQ_INT(meter_mode(true, true, 100, 0, false, true), MODE_FROZEN);
-  CHECK_EQ_INT(meter_mode(true, false, 100, 0, false, false), MODE_FROZEN);
+  CHECK_EQ_INT(meter_mode(false, true, 0, 0, false, false, false), MODE_UNLINKED);
+  CHECK_EQ_INT(meter_mode(false, true, 5, 10, false, false, false), MODE_UNLINKED);
+  CHECK_EQ_INT(meter_mode(true, true, 20, 20, false, false, false), MODE_FROZEN);
+  CHECK_EQ_INT(meter_mode(true, true, 21, 20, false, false, false), MODE_ANIMATING);
+  CHECK_EQ_INT(meter_mode(true, true, 100, 0, false, true, false), MODE_FROZEN);
+  CHECK_EQ_INT(meter_mode(true, true, 100, 0, false, false, true), MODE_FROZEN);
+  CHECK_EQ_INT(meter_mode(true, false, 100, 0, false, false, false), MODE_FROZEN);
+  CHECK_EQ_INT(meter_mode(true, true, 15, 20, true, false, false), MODE_ANIMATING);
+  CHECK_EQ_INT(meter_mode(true, true, 15, 20, true, true, false), MODE_FROZEN);
+  CHECK_EQ_INT(meter_mode(false, true, 15, 20, true, false, false), MODE_UNLINKED);
 }
 
 static void test_timer_should_run(void) {
