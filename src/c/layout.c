@@ -1,6 +1,6 @@
 #include "layout.h"
 
-#if defined(PBL_ROUND)
+#if defined(PBL_ROUND) && PBL_DISPLAY_WIDTH >= 260
 static const FaceLayout s_layout = {
   .normal = {
     .date    = GRect(0, 42, 260, 16),
@@ -40,9 +40,63 @@ static const FaceLayout s_layout = {
   },
   .font_large_res = RESOURCE_ID_ZEN_60,
   .font_small_res = RESOURCE_ID_ZEN_48,
-  .hide_meter_in_peek = false
+  .label_font_res = RESOURCE_ID_LABEL_16,
+  .hide_meter_in_peek = false,
+  .meter_pitch = 9,
+  .meter_bar_w = 7,
+  .meter_max_h = 22,
+  .rim_outer_r = 127,
+  .rim_max_len = 18
 };
-#else
+#elif defined(PBL_ROUND)
+static const FaceLayout s_layout = {
+  .normal = {
+    .date    = GRect(0, 28, 180, 14),
+    .date_align    = GTextAlignmentCenter,
+    .hour    = GRect(0, 42, 180, 44),
+    .hour_align    = GTextAlignmentCenter,
+    .ampm    = GRect(128, 46, 30, 14),
+    .ampm_align    = GTextAlignmentLeft,
+    .minute  = GRect(0, 86, 180, 44),
+    .minute_align  = GTextAlignmentCenter,
+    .meter   = GRect(0, 0, 180, 180),
+    .link    = GRect(24, 82, 22, 14),
+    .power   = GRect(124, 82, 32, 14),
+    .power_align   = GTextAlignmentRight,
+    .quiet   = GRect(86, 84, 8, 8),
+    .weather = GRect(0, 136, 180, 14),
+    .weather_align = GTextAlignmentCenter,
+    .digits  = DIGITS_LARGE
+  },
+  .peek = {
+    .date    = GRect(0, 28, 180, 14),
+    .date_align    = GTextAlignmentCenter,
+    .hour    = GRect(0, 42, 180, 44),
+    .hour_align    = GTextAlignmentCenter,
+    .ampm    = GRect(128, 46, 30, 14),
+    .ampm_align    = GTextAlignmentLeft,
+    .minute  = GRect(0, 86, 180, 44),
+    .minute_align  = GTextAlignmentCenter,
+    .meter   = GRect(0, 0, 180, 180),
+    .link    = GRect(24, 82, 22, 14),
+    .power   = GRect(124, 82, 32, 14),
+    .power_align   = GTextAlignmentRight,
+    .quiet   = GRect(86, 84, 8, 8),
+    .weather = GRect(0, 136, 180, 14),
+    .weather_align = GTextAlignmentCenter,
+    .digits  = DIGITS_SMALL
+  },
+  .font_large_res = RESOURCE_ID_ZEN_42,
+  .font_small_res = RESOURCE_ID_ZEN_42,
+  .label_font_res = RESOURCE_ID_LABEL_12,
+  .hide_meter_in_peek = false,
+  .meter_pitch = 6,
+  .meter_bar_w = 5,
+  .meter_max_h = 16,
+  .rim_outer_r = 87,
+  .rim_max_len = 12
+};
+#elif PBL_DISPLAY_WIDTH >= 200
 static const FaceLayout s_layout = {
   .normal = {
     .date    = GRect(8, 8, 120, 16),
@@ -82,7 +136,61 @@ static const FaceLayout s_layout = {
   },
   .font_large_res = RESOURCE_ID_ZEN_64,
   .font_small_res = RESOURCE_ID_ZEN_48,
-  .hide_meter_in_peek = true
+  .label_font_res = RESOURCE_ID_LABEL_16,
+  .hide_meter_in_peek = true,
+  .meter_pitch = 9,
+  .meter_bar_w = 7,
+  .meter_max_h = 22,
+  .rim_outer_r = 127,
+  .rim_max_len = 18
+};
+#else
+static const FaceLayout s_layout = {
+  .normal = {
+    .date    = GRect(6, 4, 80, 14),
+    .date_align    = GTextAlignmentLeft,
+    .hour    = GRect(6, 18, 132, 48),
+    .hour_align    = GTextAlignmentLeft,
+    .ampm    = GRect(100, 22, 38, 14),
+    .ampm_align    = GTextAlignmentRight,
+    .minute  = GRect(6, 64, 132, 48),
+    .minute_align  = GTextAlignmentRight,
+    .meter   = GRect(9, 126, 126, 20),
+    .link    = GRect(6, 150, 22, 14),
+    .power   = GRect(84, 148, 54, 14),
+    .power_align   = GTextAlignmentRight,
+    .quiet   = GRect(6, 72, 8, 8),
+    .weather = GRect(58, 4, 80, 14),
+    .weather_align = GTextAlignmentRight,
+    .digits  = DIGITS_LARGE
+  },
+  .peek = {
+    .date    = GRect(6, 4, 80, 14),
+    .date_align    = GTextAlignmentLeft,
+    .hour    = GRect(6, 18, 132, 36),
+    .hour_align    = GTextAlignmentLeft,
+    .ampm    = GRect(100, 20, 38, 14),
+    .ampm_align    = GTextAlignmentRight,
+    .minute  = GRect(6, 50, 132, 36),
+    .minute_align  = GTextAlignmentRight,
+    .meter   = GRect(9, 126, 126, 20),
+    .link    = GRect(6, 98, 22, 14),
+    .power   = GRect(84, 96, 54, 14),
+    .power_align   = GTextAlignmentRight,
+    .quiet   = GRect(6, 58, 8, 8),
+    .weather = GRect(58, 4, 80, 14),
+    .weather_align = GTextAlignmentRight,
+    .digits  = DIGITS_SMALL
+  },
+  .font_large_res = RESOURCE_ID_ZEN_48,
+  .font_small_res = RESOURCE_ID_ZEN_36,
+  .label_font_res = RESOURCE_ID_LABEL_12,
+  .hide_meter_in_peek = true,
+  .meter_pitch = 6,
+  .meter_bar_w = 5,
+  .meter_max_h = 16,
+  .rim_outer_r = 87,
+  .rim_max_len = 12
 };
 #endif
 

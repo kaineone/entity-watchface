@@ -122,7 +122,7 @@ static void update_weather(void) {
     if (date_frame.origin.y == weather_frame.origin.y) {
       for (int level = 0; level <= 2; level++) {
         weather_text_variant(text, sizeof(text), s_wx_cond, s_wx_temp_c10, s_fahrenheit, stale, level);
-        GSize size = graphics_text_layout_get_content_size(text, s_font_label, GRect(0, 0, 200, 16),
+        GSize size = graphics_text_layout_get_content_size(text, s_font_label, GRect(0, 0, 200, weather_frame.size.h),
                                                            GTextOverflowModeTrailingEllipsis,
                                                            GTextAlignmentRight);
         if (size.w <= max_w) break;
@@ -508,7 +508,7 @@ static void window_load(Window *window) {
 
   s_font_large = fonts_load_custom_font(resource_get_handle(layout_get()->font_large_res));
   s_font_small = fonts_load_custom_font(resource_get_handle(layout_get()->font_small_res));
-  s_font_label = fonts_load_custom_font(resource_get_handle(RESOURCE_ID_LABEL_16));
+  s_font_label = fonts_load_custom_font(resource_get_handle(layout_get()->label_font_res));
   if (!s_font_large || !s_font_small || !s_font_label) {
     APP_LOG(APP_LOG_LEVEL_ERROR, "font load failed");
   }
