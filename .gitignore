@@ -11,3 +11,4 @@ __pycache__/
 /.work/
 # Client design handoff (branded); local only
 /design/
+.claude/scheduled_tasks.lock

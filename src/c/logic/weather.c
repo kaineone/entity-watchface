@@ -1,5 +1,6 @@
 #include "weather.h"
 #include <stdio.h>
+#include <stdint.h>
 
 const char *weather_word(int cond) {
   switch (cond) {
@@ -13,20 +14,25 @@ const char *weather_word(int cond) {
 }
 
 int weather_round_c10(int temp_c10, bool fahrenheit) {
+  int64_t t = temp_c10;
   if (fahrenheit) {
-    int f100 = temp_c10 * 18 + 3200;
-    if (f100 >= 0) return (f100 + 50) / 100;
-    return (f100 - 50) / 100;
+    int64_t f100 = t * 18 + 3200;
+    if (f100 >= 0) return (int)((f100 + 50) / 100);
+    return (int)((f100 - 50) / 100);
   }
-  if (temp_c10 >= 0) return (temp_c10 + 5) / 10;
-  return (temp_c10 - 5) / 10;
+  if (t >= 0) return (int)((t + 5) / 10);
+  return (int)((t - 5) / 10);
 }
 
 void weather_text_variant(char *buf, size_t n, int cond, int temp_c10, bool fahrenheit, bool stale, int level) {
   if (level < 0) level = 0;
   else if (level > 3) level = 3;
 
-  int t = weather_round_c10(temp_c10, fahrenheit);
+  int t_c10 = temp_c10;
+  if (t_c10 < WEATHER_TEMP_C10_MIN) t_c10 = WEATHER_TEMP_C10_MIN;
+  else if (t_c10 > WEATHER_TEMP_C10_MAX) t_c10 = WEATHER_TEMP_C10_MAX;
+
+  int t = weather_round_c10(t_c10, fahrenheit);
   const char *prefix = (stale && level == 0) ? "~" : "";
   const char *sep = (level <= 1) ? " " : "";
   const char *deg = (level <= 2) ? "\xC2\xB0" : "";
@@ -39,5 +45,13 @@ void weather_text(char *buf, size_t n, int cond, int temp_c10, bool fahrenheit, 
 
 bool weather_is_stale(int32_t now, int32_t last, int32_t max_age) {
   if (last <= 0) return true;
-  return now - last > max_age;
+  int64_t now64 = now;
+  if (last > now64 + WEATHER_FUTURE_SLACK) return true;
+  int64_t age = now64 - last;
+  return age > max_age;
+}
+
+bool weather_valid(int cond, int temp_c10) {
+  return cond >= WX_CLEAR && cond <= WX_SNOW &&
+         temp_c10 >= WEATHER_TEMP_C10_MIN && temp_c10 <= WEATHER_TEMP_C10_MAX;
 }

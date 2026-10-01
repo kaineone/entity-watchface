@@ -1,6 +1,7 @@
 #include <pebble.h>
 #include "settings_store.h"
 #include "logic/settings.h"
+#include "logic/weather.h"
 
 #define SETTINGS_PERSIST_KEY 1
 
@@ -8,17 +9,15 @@ static Settings s_settings;
 static SettingsChangedHandler s_on_change;
 static WeatherReceivedHandler s_on_weather;
 
-static int cstring_to_int(const char *s) {
-  int sign = 1;
-  int v = 0;
-  if (!s) return 0;
-  while (*s == ' ') s++;
-  if (*s == '-') { sign = -1; s++; }
-  while (*s >= '0' && *s <= '9') {
-    v = v * 10 + (*s - '0');
-    s++;
-  }
-  return v * sign;
+static bool tuple_is_valid_int(const Tuple *t) {
+  return t && (t->type == TUPLE_INT || t->type == TUPLE_UINT) &&
+         (t->length == 1 || t->length == 2 || t->length == 4);
+}
+
+static bool tuple_is_valid_string(const Tuple *t) {
+  if (!t || t->type != TUPLE_CSTRING || t->length == 0) return false;
+  const char *str = t->value->cstring;  /* cstring is a zero-length array in the SDK */
+  return str[t->length - 1] == '\0';
 }
 
 static int tuple_int(const Tuple *t) {
@@ -34,14 +33,15 @@ static int tuple_int(const Tuple *t) {
 }
 
 static bool set_bool_from_tuple(bool *field, const Tuple *t) {
-  if (t->type == TUPLE_CSTRING) {
-    return settings_set_bool(field, cstring_to_int(t->value->cstring));
+  if (tuple_is_valid_int(t)) {
+    return settings_set_bool(field, tuple_int(t));
   }
-  return settings_set_bool(field, tuple_int(t));
-}
-
-static bool tuple_is_int(const Tuple *t) {
-  return t->type == TUPLE_INT || t->type == TUPLE_UINT;
+  if (tuple_is_valid_string(t)) {
+    const char *s = t->value->cstring;
+    if (strcmp(s, "0") == 0) return settings_set_bool(field, 0);
+    if (strcmp(s, "1") == 0) return settings_set_bool(field, 1);
+  }
+  return false;
 }
 
 void settings_store_request_weather(void) {
@@ -58,18 +58,18 @@ static void inbox_received_handler(DictionaryIterator *iter, void *context) {
 
   t = dict_find(iter, MESSAGE_KEY_ClockFormat);
   if (t) {
-    if (t->type == TUPLE_CSTRING) {
+    if (tuple_is_valid_string(t)) {
       changed = settings_set_clock_str(&s_settings, t->value->cstring) || changed;
-    } else {
+    } else if (tuple_is_valid_int(t)) {
       changed = settings_set_clock(&s_settings, tuple_int(t)) || changed;
     }
   }
 
   t = dict_find(iter, MESSAGE_KEY_HourColor);
   if (t) {
-    if (t->type == TUPLE_CSTRING) {
+    if (tuple_is_valid_string(t)) {
       changed = settings_set_hour_color_str(&s_settings, t->value->cstring) || changed;
-    } else {
+    } else if (tuple_is_valid_int(t)) {
       changed = settings_set_hour_color(&s_settings, tuple_int(t)) || changed;
     }
   }
@@ -91,9 +91,9 @@ static void inbox_received_handler(DictionaryIterator *iter, void *context) {
 
   t = dict_find(iter, MESSAGE_KEY_LowBattery);
   if (t) {
-    if (t->type == TUPLE_CSTRING) {
+    if (tuple_is_valid_string(t)) {
       changed = settings_set_low_battery_str(&s_settings, t->value->cstring) || changed;
-    } else {
+    } else if (tuple_is_valid_int(t)) {
       changed = settings_set_low_battery(&s_settings, tuple_int(t)) || changed;
     }
   }
@@ -105,8 +105,12 @@ static void inbox_received_handler(DictionaryIterator *iter, void *context) {
 
   const Tuple *wc = dict_find(iter, MESSAGE_KEY_WeatherCond);
   const Tuple *wt = dict_find(iter, MESSAGE_KEY_WeatherTempC10);
-  if (wc && wt && s_on_weather && tuple_is_int(wc) && tuple_is_int(wt)) {
-    s_on_weather(tuple_int(wc), tuple_int(wt));
+  if (wc && wt && s_on_weather && tuple_is_valid_int(wc) && tuple_is_valid_int(wt)) {
+    int cond = tuple_int(wc);
+    int temp_c10 = tuple_int(wt);
+    if (weather_valid(cond, temp_c10)) {
+      s_on_weather(cond, temp_c10);
+    }
   }
 }
 

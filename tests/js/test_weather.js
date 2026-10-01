@@ -24,11 +24,24 @@ assert.strictEqual(weather.condFromWmo(99), 3);
 assert.strictEqual(weather.condFromWmo(100), 1);
 assert.strictEqual(weather.condFromWmo('x'), 1);
 assert.strictEqual(weather.condFromWmo(undefined), 1);
+assert.strictEqual(weather.condFromWmo(95.5), 1);
+assert.strictEqual(weather.condFromWmo('95'), 1);
 
 assert.strictEqual(
   weather.buildUrl(51.50734, -0.12776),
-  'https://api.open-meteo.com/v1/forecast?latitude=51.51&longitude=-0.13&current=temperature_2m,weather_code'
+  'https://api.open-meteo.com/v1/forecast?latitude=51.5&longitude=-0.1&current=temperature_2m,weather_code'
 );
+
+assert.strictEqual(weather.buildUrl(NaN, 0), null);
+assert.strictEqual(weather.buildUrl(undefined, 0), null);
+assert.strictEqual(weather.buildUrl(null, 0), null);
+assert.strictEqual(weather.buildUrl('1', 0), null);
+assert.strictEqual(weather.buildUrl(91, 0), null);
+assert.strictEqual(weather.buildUrl(0, 181), null);
+assert.strictEqual(weather.buildUrl(1e21, 0), null);
+
+var nearZero = weather.buildUrl(-0.01, 0);
+assert.ok(nearZero.indexOf('latitude=0.0') !== -1);
 
 var parsed = weather.parseResponse({ current: { weather_code: 1, temperature_2m: 18.26 } });
 assert.strictEqual(parsed.cond, 0);
@@ -42,5 +55,14 @@ assert.strictEqual(weather.parseResponse(null), null);
 assert.strictEqual(weather.parseResponse({}), null);
 assert.strictEqual(weather.parseResponse({ current: { weather_code: 1 } }), null);
 assert.strictEqual(weather.parseResponse({ current: { weather_code: 1, temperature_2m: NaN } }), null);
+
+assert.strictEqual(weather.parseResponse({ current: { weather_code: 1, temperature_2m: 150 } }).tempC10, 1500);
+assert.strictEqual(weather.parseResponse({ current: { weather_code: 1, temperature_2m: 150.1 } }), null);
+assert.strictEqual(weather.parseResponse({ current: { weather_code: 1, temperature_2m: -150.1 } }), null);
+assert.strictEqual(weather.parseResponse({ current: { weather_code: 1, temperature_2m: 1e308 } }), null);
+
+var signedZero = weather.parseResponse({ current: { weather_code: 1, temperature_2m: -0.04 } });
+assert.strictEqual(signedZero.cond, 0);
+assert.ok(Object.is(signedZero.tempC10, 0));
 
 console.log('ok: js weather');

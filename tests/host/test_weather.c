@@ -1,6 +1,8 @@
 #include "test.h"
 #include "weather.h"
 #include <string.h>
+#include <stdint.h>
+#include <limits.h>
 
 #define CHECK_STR(a, b) \
   do { \
@@ -96,6 +98,43 @@ int main(void) {
   CHECK_STR(buf, "~clear -12\xC2\xB0");
   weather_text_variant(buf, sizeof(buf), 0, -120, false, true, 5);
   CHECK_STR(buf, "clear-12");
+
+  CHECK(!weather_valid(-1, 0));
+  CHECK(weather_valid(0, 0));
+  CHECK(weather_valid(4, 0));
+  CHECK(!weather_valid(5, 0));
+  CHECK(!weather_valid(0, -1000));
+  CHECK(weather_valid(0, -999));
+  CHECK(weather_valid(0, 999));
+  CHECK(!weather_valid(0, 1000));
+
+  CHECK(weather_round_c10(INT32_MAX, false) > 0);
+  CHECK(weather_round_c10(INT32_MIN, false) < 0);
+  CHECK(weather_round_c10(INT32_MAX, true) > 0);
+  CHECK(weather_round_c10(INT32_MIN, true) < 0);
+
+  CHECK(weather_is_stale(100, 5000, 3600));
+  CHECK(!weather_is_stale(5000, 5200, 3600));
+  CHECK(weather_is_stale(INT32_MIN, 1, 3600));
+  CHECK(weather_is_stale(INT32_MAX, 1, 3600));
+
+  weather_text(buf, sizeof(buf), 0, 2000000, false, false);
+  CHECK_STR(buf, "clear 100\xC2\xB0");
+
+  const int extreme_temps[] = {-2000000, -999, 0, 999, 2000000};
+  for (int ci = 0; ci <= 4; ci++) {
+    for (int lvl = 0; lvl <= 3; lvl++) {
+      for (int st = 0; st < 2; st++) {
+        for (int f = 0; f < 2; f++) {
+          for (size_t ti = 0; ti < sizeof(extreme_temps)/sizeof(extreme_temps[0]); ti++) {
+            weather_text_variant(buf, sizeof(buf), ci, extreme_temps[ti], f, st, lvl);
+            size_t len = strlen(buf);
+            CHECK(len < 16);
+          }
+        }
+      }
+    }
+  }
 
   TEST_MAIN_END();
 }

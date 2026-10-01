@@ -110,6 +110,48 @@ static void test_valid_rejects(void) {
   CHECK(!settings_valid(&s));
 }
 
+static void test_string_rejections(void) {
+  const char *bad[] = {
+    "4294967297",
+    "99999999999999999999",
+    "-99999999999999999999",
+    " 1",
+    "+1",
+    "0x10",
+    "1 ",
+    "\n1"
+  };
+  size_t count = sizeof(bad) / sizeof(bad[0]);
+
+  Settings s;
+  settings_defaults(&s);
+  for (size_t i = 0; i < count; i++) {
+    CHECK(!settings_set_clock_str(&s, bad[i]));
+    CHECK_EQ_INT(s.clock, -1);
+  }
+  CHECK(settings_set_clock_str(&s, "1"));
+  CHECK_EQ_INT(s.clock, 1);
+  CHECK(settings_set_clock_str(&s, "-1"));
+  CHECK_EQ_INT(s.clock, -1);
+
+  settings_defaults(&s);
+  CHECK(settings_set_hour_color(&s, HOUR_CREAM));
+  for (size_t i = 0; i < count; i++) {
+    CHECK(!settings_set_hour_color_str(&s, bad[i]));
+    CHECK_EQ_INT(s.hour_color, HOUR_CREAM);
+  }
+  CHECK(settings_set_hour_color_str(&s, "red"));
+  CHECK_EQ_INT(s.hour_color, HOUR_RED);
+
+  settings_defaults(&s);
+  for (size_t i = 0; i < count; i++) {
+    CHECK(!settings_set_low_battery_str(&s, bad[i]));
+    CHECK_EQ_INT(s.low_battery, 20);
+  }
+  CHECK(settings_set_low_battery_str(&s, "30"));
+  CHECK_EQ_INT(s.low_battery, 30);
+}
+
 int main(void) {
   test_defaults_and_valid();
   test_clock_setters();
@@ -117,5 +159,6 @@ int main(void) {
   test_low_battery_setters();
   test_bool_setters();
   test_valid_rejects();
+  test_string_rejections();
   TEST_MAIN_END();
 }
