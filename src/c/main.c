@@ -1,8 +1,10 @@
 #include <pebble.h>
 #include "logic/fmt.h"
+#include "logic/status.h"
 #include "layout.h"
 #include "palette.h"
 #include "meter_layer.h"
+#include "status_layer.h"
 
 #include <stdint.h>
 
@@ -11,7 +13,10 @@ static TextLayer *s_date_layer;
 static TextLayer *s_hour_layer;
 static TextLayer *s_ampm_layer;
 static TextLayer *s_minute_layer;
+static TextLayer *s_power_layer;
 static Layer *s_meter_layer;
+static Layer *s_link_layer;
+static Layer *s_quiet_layer;
 
 static GFont s_font_large;
 static GFont s_font_small;
@@ -21,6 +26,7 @@ static char s_date_buf[FMT_DATE_LEN];
 static char s_hour_buf[FMT_HOUR_LEN];
 static char s_minute_buf[FMT_MINUTE_LEN];
 static char s_ampm_buf[3];
+static char s_power_buf[STATUS_POWER_LEN];
 
 static GColor s_hour_color = PAL_HOUR_RED;
 static int8_t s_hour12_pref = -1;
@@ -33,8 +39,12 @@ static bool s_linked = false;
 static bool s_quiet = false;
 static bool s_focused = true;
 static bool s_animate_pref = true;
+static bool s_charging = false;
+static bool s_vibe_pref = true;
 static int s_battery_pct = 100;
 static int s_battery_threshold = 20;
+static StatusInk s_power_ink;
+static bool s_power_ink_set = false;
 
 static AppTimer *s_meter_timer = NULL;
 static MeterMode s_meter_mode = MODE_FROZEN;
@@ -43,6 +53,28 @@ static void meter_refresh(void);
 
 static bool is_24h(void) {
   return s_hour12_pref == 0 || (s_hour12_pref == -1 && clock_is_24h_style());
+}
+
+static void update_power(void) {
+  char tmp[STATUS_POWER_LEN];
+  status_power_text(tmp, sizeof(tmp), s_battery_pct, s_charging);
+
+  if (strcmp(s_power_buf, tmp) != 0) {
+    strcpy(s_power_buf, tmp);
+    if (s_power_layer) text_layer_set_text(s_power_layer, s_power_buf);
+  }
+
+  StatusInk ink = status_power_ink(s_battery_pct, s_battery_threshold, s_charging);
+  if (!s_power_ink_set || ink != s_power_ink) {
+    s_power_ink = ink;
+    s_power_ink_set = true;
+    if (s_power_layer) {
+      GColor c = PAL_GOLD;
+      if (ink == STATUS_RED) c = PAL_RED;
+      else if (ink == STATUS_ACCENT) c = PAL_ACCENT;
+      text_layer_set_text_color(s_power_layer, c);
+    }
+  }
 }
 
 static void update_time(struct tm *tick_time) {
@@ -89,6 +121,7 @@ static void tick_handler(struct tm *tick_time, TimeUnits units_changed) {
   (void)units_changed;
   update_time(tick_time);
   s_quiet = quiet_time_is_active();
+  quiet_layer_set_visible(s_quiet);
   meter_refresh();
 }
 
@@ -103,6 +136,9 @@ static void apply_layout(bool peek) {
   if (s_hour_layer) layer_set_frame(text_layer_get_layer(s_hour_layer), frames->hour);
   if (s_ampm_layer) layer_set_frame(text_layer_get_layer(s_ampm_layer), frames->ampm);
   if (s_minute_layer) layer_set_frame(text_layer_get_layer(s_minute_layer), frames->minute);
+  if (s_power_layer) layer_set_frame(text_layer_get_layer(s_power_layer), frames->power);
+  if (s_link_layer) layer_set_frame(s_link_layer, frames->link);
+  if (s_quiet_layer) layer_set_frame(s_quiet_layer, frames->quiet);
 
   if (s_hour_layer) {
     text_layer_set_font(s_hour_layer, frames->digits == DIGITS_LARGE ? s_font_large : s_font_small);
@@ -139,12 +175,19 @@ static TextLayer *make_layer(GRect frame, GTextAlignment align, GFont font, GCol
 }
 
 static void handle_connection(bool connected) {
+  bool was = s_linked;
   s_linked = connected;
+  if (status_should_vibrate(was, connected, s_vibe_pref, quiet_time_is_active())) {
+    vibes_short_pulse();
+  }
+  link_layer_set_linked(connected);
   meter_refresh();
 }
 
 static void handle_battery(BatteryChargeState charge) {
   s_battery_pct = charge.charge_percent;
+  s_charging = charge.is_charging || charge.is_plugged;
+  update_power();
   meter_refresh();
 }
 
@@ -195,8 +238,12 @@ static void window_load(Window *window) {
   s_ampm_layer = make_layer(frames->ampm, GTextAlignmentRight, s_font_label, PAL_GOLD);
   s_minute_layer = make_layer(frames->minute, GTextAlignmentRight, s_font_large, PAL_GOLD);
   s_meter_layer = meter_layer_create(frames->meter);
+  s_power_layer = make_layer(frames->power, GTextAlignmentRight, s_font_label, PAL_GOLD);
+  s_link_layer = link_layer_create(frames->link);
+  s_quiet_layer = quiet_layer_create(frames->quiet);
 
-  if (!s_date_layer || !s_hour_layer || !s_ampm_layer || !s_minute_layer || !s_meter_layer) {
+  if (!s_date_layer || !s_hour_layer || !s_ampm_layer || !s_minute_layer ||
+      !s_meter_layer || !s_power_layer || !s_link_layer || !s_quiet_layer) {
     APP_LOG(APP_LOG_LEVEL_ERROR, "layer create failed");
     return;
   }
@@ -206,6 +253,9 @@ static void window_load(Window *window) {
   layer_add_child(root, text_layer_get_layer(s_ampm_layer));
   layer_add_child(root, text_layer_get_layer(s_minute_layer));
   layer_add_child(root, s_meter_layer);
+  layer_add_child(root, text_layer_get_layer(s_power_layer));
+  layer_add_child(root, s_link_layer);
+  layer_add_child(root, s_quiet_layer);
 
   const bool peek = layer_get_unobstructed_bounds(root).size.h < layer_get_bounds(root).size.h;
   apply_layout(peek);
@@ -213,15 +263,21 @@ static void window_load(Window *window) {
   time_t now = time(NULL);
   update_time(localtime(&now));
 
+  s_linked = connection_service_peek_pebble_app_connection();
+  BatteryChargeState charge = battery_state_service_peek();
+  s_battery_pct = charge.charge_percent;
+  s_charging = charge.is_charging || charge.is_plugged;
+  s_quiet = quiet_time_is_active();
+
+  update_power();
+  link_layer_set_linked(s_linked);
+  quiet_layer_set_visible(s_quiet);
+
   tick_timer_service_subscribe(MINUTE_UNIT, tick_handler);
 
   unobstructed_area_service_subscribe((UnobstructedAreaHandlers) {
     .did_change = unobstructed_did_change
   }, NULL);
-
-  s_linked = connection_service_peek_pebble_app_connection();
-  s_battery_pct = battery_state_service_peek().charge_percent;
-  s_quiet = quiet_time_is_active();
 
   connection_service_subscribe((ConnectionHandlers) {
     .pebble_app_connection_handler = handle_connection
@@ -249,6 +305,15 @@ static void window_unload(Window *window) {
   meter_layer_destroy();
   s_meter_layer = NULL;
 
+  link_layer_destroy();
+  s_link_layer = NULL;
+  quiet_layer_destroy();
+  s_quiet_layer = NULL;
+
+  if (s_power_layer) {
+    text_layer_destroy(s_power_layer);
+    s_power_layer = NULL;
+  }
   if (s_date_layer) {
     text_layer_destroy(s_date_layer);
     s_date_layer = NULL;

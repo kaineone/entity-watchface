@@ -11,6 +11,9 @@ typedef struct {
   GRect ampm;
   GRect minute;
   GRect meter;
+  GRect link;
+  GRect power;
+  GRect quiet;
   DigitSize digits;
 } FaceFrames;
 
