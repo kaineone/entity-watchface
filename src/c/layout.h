@@ -14,6 +14,7 @@ typedef struct {
   GRect link;
   GRect power;
   GRect quiet;
+  GRect weather;
   DigitSize digits;
 } FaceFrames;
 

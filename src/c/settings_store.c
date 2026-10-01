@@ -6,6 +6,7 @@
 
 static Settings s_settings;
 static SettingsChangedHandler s_on_change;
+static WeatherReceivedHandler s_on_weather;
 
 static int cstring_to_int(const char *s) {
   int sign = 1;
@@ -37,6 +38,17 @@ static bool set_bool_from_tuple(bool *field, const Tuple *t) {
     return settings_set_bool(field, cstring_to_int(t->value->cstring));
   }
   return settings_set_bool(field, tuple_int(t));
+}
+
+static bool tuple_is_int(const Tuple *t) {
+  return t->type == TUPLE_INT || t->type == TUPLE_UINT;
+}
+
+void settings_store_request_weather(void) {
+  DictionaryIterator *iter;
+  if (app_message_outbox_begin(&iter) != APP_MSG_OK) return;
+  (void)dict_write_uint8(iter, MESSAGE_KEY_WeatherRequest, 1);
+  (void)app_message_outbox_send();
 }
 
 static void inbox_received_handler(DictionaryIterator *iter, void *context) {
@@ -90,9 +102,15 @@ static void inbox_received_handler(DictionaryIterator *iter, void *context) {
     persist_write_data(SETTINGS_PERSIST_KEY, &s_settings, sizeof(s_settings));
     if (s_on_change) s_on_change(&s_settings);
   }
+
+  const Tuple *wc = dict_find(iter, MESSAGE_KEY_WeatherCond);
+  const Tuple *wt = dict_find(iter, MESSAGE_KEY_WeatherTempC10);
+  if (wc && wt && s_on_weather && tuple_is_int(wc) && tuple_is_int(wt)) {
+    s_on_weather(tuple_int(wc), tuple_int(wt));
+  }
 }
 
-void settings_store_init(SettingsChangedHandler on_change) {
+void settings_store_init(SettingsChangedHandler on_change, WeatherReceivedHandler on_weather) {
   Settings tmp;
   int len = persist_read_data(SETTINGS_PERSIST_KEY, &tmp, sizeof(tmp));
   if (len != sizeof(tmp) || !settings_valid(&tmp)) {
@@ -101,6 +119,7 @@ void settings_store_init(SettingsChangedHandler on_change) {
   s_settings = tmp;
 
   s_on_change = on_change;
+  s_on_weather = on_weather;
   app_message_register_inbox_received(inbox_received_handler);
   app_message_open(256, 64);
 }
