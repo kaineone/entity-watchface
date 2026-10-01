@@ -382,6 +382,7 @@ static long read_steps(void) {
   return -1;
 }
 
+#if !defined(PBL_ROUND)
 static long read_bpm(void) {
   time_t end = time(NULL);
   time_t start = end;  /* the HR guide checks (now, now) before peeking the current value */
@@ -391,6 +392,7 @@ static long read_bpm(void) {
   }
   return -1;
 }
+#endif
 
 static void swap_timer_cb(void *data) {
   (void)data;
@@ -409,6 +411,8 @@ static void swap_in(void) {
     if (s_date_layer) text_layer_set_text(s_date_layer, s_date_buf);
   }
 
+#if !defined(PBL_ROUND)
+  /* Round Pebbles have no heart-rate sensor: keep the weather on the bottom row. */
   char wx_tmp[FMT_BPM_LEN];
   long bpm = read_bpm();
   fmt_bpm(wx_tmp, sizeof(wx_tmp), bpm);
@@ -421,6 +425,7 @@ static void swap_in(void) {
     text_layer_set_text_color(s_weather_layer, PAL_ACCENT);
   }
   s_wx_color_set = false;
+#endif
 
   if (s_swap_timer) app_timer_cancel(s_swap_timer);
   s_swap_timer = app_timer_register(10000, swap_timer_cb, NULL);

@@ -52,7 +52,7 @@ Source for all items below: https://raw.githubusercontent.com/coredevices/pebble
 
 - Hardware table (official): emery = Pebble Time 2: 200x228, 64 colours, "Max 128k app size", 6-axis IMU + compass + barometer, microphone (+2nd mic), touch screen YES, RGB multicolour backlight, 4 buttons, rectangle, 1.5". https://developer.repebble.com/guides/tools-and-resources/hardware-information/
 - CONFLICT, heart rate: hardware table says emery HRM = "No"; the HRM guide says "Pebble Time 2 and Pebble 2 (excluding SE)" have HRM; `emu-heart-rate` is labelled "emery only". Treat HR as unverified on retail PT2; always guard with `health_service_metric_accessible()` and handle 0/unavailable. https://developer.repebble.com/guides/events-and-services/hrm/ ; https://raw.githubusercontent.com/coredevices/pebble-tool/main/pebble_tool/commands/emucontrol.py
-- Sibling platforms: flint (Pebble 2 SE/Duo, also 200x228 colour, no HR, touch listed Yes), gabbro (Round 2, 260x260 round). https://developer.repebble.com/guides/tools-and-resources/hardware-information/
+- Sibling platforms: flint (Pebble 2 Duo): CORRECTION from SDK 4.33.1 `pebble_sdk_platform.py`: 144x168, black and white (`PBL_BW`), no touch define. The online table was wrong, gabbro (Round 2, 260x260 round). https://developer.repebble.com/guides/tools-and-resources/hardware-information/
 - Emery platform introduced with SDK 4.2 (beta4, 2016-10-11); original resolution 200x228 at 202 PPI; legacy apps run in "Bezel Mode" at 144x168. https://developer.rebble.io/blog/2016/10/11/Emery-SDK-Beta/
 - pebble-tool added emery support in v4.5-rc1 (2023). https://github.com/pebble/pebble-tool/releases
 - Macros: `PBL_PLATFORM_EMERY`, `PBL_COLOR`, `PBL_DISPLAY_WIDTH/HEIGHT`, `PBL_TOUCH` ("running on hardware with a touch screen"); docs strongly recommend feature defines over `PBL_PLATFORM_*`. https://developer.repebble.com/guides/best-practices/building-for-every-pebble/
@@ -64,7 +64,7 @@ Source for all items below: https://raw.githubusercontent.com/coredevices/pebble
 - Alloy (JavaScript/Moddable) is the new first-class option, but this project is native C. https://developer.repebble.com/guides/alloy/
 
 ### package.json (app metadata)
-- `targetPlatforms`: array; defaults to ALL if omitted. For a PT2-only face use `["emery"]` (consider adding `"flint"` since it is also 200x228 colour, unverified layout parity). https://developer.repebble.com/guides/tools-and-resources/app-metadata/
+- `targetPlatforms`: array; defaults to ALL if omitted. For a PT2-only face use `["emery"]` (flint is 144x168 black and white per the SDK platform table; see the correction at the end). https://developer.repebble.com/guides/tools-and-resources/app-metadata/
 - `watchapp.watchface: true` marks a watchface (default false); also `hiddenApp`, `onlyShownOnCommunication`. Same source.
 - `capabilities`: "location", "configurable", "health" are the supported ones. Same source. "health" is required for HealthService; "location" for `navigator.geolocation`; "configurable" shows the gear icon for Clay. https://developer.repebble.com/guides/events-and-services/health/ ; https://developer.repebble.com/guides/communication/using-pebblekit-js/ ; https://developer.repebble.com/guides/user-interfaces/app-configuration/
 - `pebble.enableMultiJS` default true (required by Clay). `resources.media` max 256 entries. App-metadata page above.
@@ -137,3 +137,7 @@ Source for all items below: https://raw.githubusercontent.com/coredevices/pebble
 - Build for all content sizes; do not hardcode 200x228 or quick-view height; use `layer_get_unobstructed_bounds` and `PBL_DISPLAY_*`. https://developer.repebble.com/guides/user-interfaces/content-size/ ; https://developer.repebble.com/guides/user-interfaces/unobstructed-area/
 - Color: use `GColor` 64-colour palette; preview with https://developer.repebble.com/guides/tools-and-resources/color-picker/
 - Docs hub / TOC for further reading: https://developer.repebble.com/guides/toc/
+
+## Correction from SDK 4.33.1 platform table (pebble_sdk_platform.py)
+- No platform defines a heart-rate feature macro; heart-rate availability can only be checked at runtime (`health_service_metric_accessible`).
+- emery: COLOR RECT MICROPHONE SMARTSTRAP HEALTH COMPASS TOUCH RGB_BACKLIGHT SPEAKER. gabbro: COLOR ROUND MICROPHONE HEALTH COMPASS TOUCH. flint: BW RECT 144x168 MICROPHONE HEALTH COMPASS SPEAKER. basalt: COLOR RECT 144x168. chalk: COLOR ROUND 180x180.
