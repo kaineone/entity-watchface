@@ -43,6 +43,9 @@ jobs:
       - name: Run host tests
         run: make -C tests/host
 
+      - name: Run JS tests
+        run: node tests/js/test_weather.js
+
       - uses: actions/upload-artifact@v4
         with:
           name: entity-pbw

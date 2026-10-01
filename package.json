@@ -15,7 +15,8 @@
     "sdkVersion": "3",
     "enableMultiJS": true,
     "capabilities": [
-      "configurable"
+      "configurable",
+      "location"
     ],
     "targetPlatforms": [
       "emery",
@@ -32,7 +33,10 @@
       "Animate",
       "VibeOnDisconnect",
       "TapSwap",
-      "LowBattery"
+      "LowBattery",
+      "WeatherCond",
+      "WeatherTempC10",
+      "WeatherRequest"
     ],
     "resources": {
       "media": [
@@ -58,7 +62,7 @@
           "type": "font",
           "name": "LABEL_16",
           "file": "fonts/JetBrainsMono-Medium.ttf",
-          "characterRegex": "[a-z0-9 .°%+~]"
+          "characterRegex": "[a-z0-9 .°%+~-]"
         }
       ]
     }

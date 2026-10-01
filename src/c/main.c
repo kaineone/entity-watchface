@@ -1,12 +1,23 @@
 #include <pebble.h>
 #include <stdint.h>
+#include <string.h>
 #include "logic/fmt.h"
 #include "logic/status.h"
+#include "logic/weather.h"
 #include "layout.h"
 #include "palette.h"
 #include "meter_layer.h"
 #include "status_layer.h"
 #include "settings_store.h"
+
+#define WX_PERSIST_KEY 2
+
+typedef struct __attribute__((__packed__)) {
+  uint8_t version;
+  int8_t cond;
+  int16_t temp_c10;
+  int32_t time;
+} WxPersist;
 
 static Window *s_window;
 static TextLayer *s_date_layer;
@@ -14,6 +25,7 @@ static TextLayer *s_hour_layer;
 static TextLayer *s_ampm_layer;
 static TextLayer *s_minute_layer;
 static TextLayer *s_power_layer;
+static TextLayer *s_weather_layer;
 static Layer *s_meter_layer;
 static Layer *s_link_layer;
 static Layer *s_quiet_layer;
@@ -27,6 +39,7 @@ static char s_hour_buf[FMT_HOUR_LEN];
 static char s_minute_buf[FMT_MINUTE_LEN];
 static char s_ampm_buf[3];
 static char s_power_buf[STATUS_POWER_LEN];
+static char s_weather_buf[WEATHER_TEXT_LEN];
 
 static GColor s_hour_color = PAL_HOUR_RED;
 static int8_t s_hour12_pref = -1;
@@ -41,10 +54,19 @@ static bool s_focused = true;
 static bool s_animate_pref = true;
 static bool s_charging = false;
 static bool s_vibe_pref = true;
+static bool s_show_weather = true;
+static bool s_fahrenheit = false;
+static bool s_wx_color_set = false;
+static bool s_wx_stale_drawn = false;
+
 static int s_battery_pct = 100;
 static int s_battery_threshold = 20;
 static StatusInk s_power_ink;
 static bool s_power_ink_set = false;
+
+static int s_wx_cond = 0;
+static int s_wx_temp_c10 = 0;
+static int32_t s_wx_time = 0;
 
 static AppTimer *s_meter_timer = NULL;
 static MeterMode s_meter_mode = MODE_FROZEN;
@@ -53,6 +75,62 @@ static void meter_refresh(void);
 
 static bool is_24h(void) {
   return s_hour12_pref == 0 || (s_hour12_pref == -1 && clock_is_24h_style());
+}
+
+static void update_weather(void) {
+  if (!s_weather_layer) return;
+
+  layer_set_hidden(text_layer_get_layer(s_weather_layer), !s_show_weather);
+  if (!s_show_weather) return;
+
+  bool stale = false;
+  char text[WEATHER_TEXT_LEN];
+  if (s_wx_time == 0) {
+    text[0] = '\0';
+  } else {
+    stale = weather_is_stale((int32_t)time(NULL), s_wx_time, WEATHER_STALE_SECS);
+
+    int date_w = s_date_layer ? text_layer_get_content_size(s_date_layer).w : 0;
+    GRect date_frame = s_date_layer ? layer_get_frame(text_layer_get_layer(s_date_layer)) : GRect(0, 0, 0, 0);
+    GRect weather_frame = layer_get_frame(text_layer_get_layer(s_weather_layer));
+    int max_w = weather_frame.origin.x + weather_frame.size.w - (date_frame.origin.x + date_w + 4);
+
+    for (int level = 0; level <= 2; level++) {
+      weather_text_variant(text, sizeof(text), s_wx_cond, s_wx_temp_c10, s_fahrenheit, stale, level);
+      GSize size = graphics_text_layout_get_content_size(text, s_font_label, GRect(0, 0, 200, 16),
+                                                         GTextOverflowModeTrailingEllipsis,
+                                                         GTextAlignmentRight);
+      if (size.w <= max_w) break;
+    }
+  }
+
+  if (strcmp(s_weather_buf, text) != 0) {
+    strcpy(s_weather_buf, text);
+    text_layer_set_text(s_weather_layer, s_weather_buf);
+  }
+
+  bool draw_stale = stale && s_wx_time != 0;
+  if (!s_wx_color_set || draw_stale != s_wx_stale_drawn) {
+    s_wx_stale_drawn = draw_stale;
+    s_wx_color_set = true;
+    text_layer_set_text_color(s_weather_layer, draw_stale ? PAL_DISABLED : PAL_ACCENT);
+  }
+}
+
+static void on_weather_received(int cond, int temp_c10) {
+  s_wx_cond = cond;
+  s_wx_temp_c10 = temp_c10;
+  s_wx_time = (int32_t)time(NULL);
+
+  WxPersist p = {
+    .version = 1,
+    .cond = (int8_t)cond,
+    .temp_c10 = (int16_t)temp_c10,
+    .time = s_wx_time
+  };
+  (void)persist_write_data(WX_PERSIST_KEY, &p, sizeof(p));
+
+  update_weather();
 }
 
 static void update_power(void) {
@@ -106,15 +184,18 @@ static void update_time(struct tm *tick_time) {
     }
   }
 
+  bool date_changed = false;
   if (tick_time->tm_yday != s_last_yday) {
     char dt[FMT_DATE_LEN];
     fmt_date(dt, sizeof(dt), tick_time->tm_wday, tick_time->tm_mday, tick_time->tm_mon);
     if (strcmp(s_date_buf, dt) != 0) {
       strcpy(s_date_buf, dt);
       if (s_date_layer) text_layer_set_text(s_date_layer, s_date_buf);
+      date_changed = true;
     }
     s_last_yday = tick_time->tm_yday;
   }
+  if (date_changed) update_weather();
 }
 
 static void tick_handler(struct tm *tick_time, TimeUnits units_changed) {
@@ -123,6 +204,7 @@ static void tick_handler(struct tm *tick_time, TimeUnits units_changed) {
   s_quiet = quiet_time_is_active();
   quiet_layer_set_visible(s_quiet);
   meter_refresh();
+  update_weather();
 }
 
 static void apply_layout(bool peek) {
@@ -137,6 +219,7 @@ static void apply_layout(bool peek) {
   if (s_ampm_layer) layer_set_frame(text_layer_get_layer(s_ampm_layer), frames->ampm);
   if (s_minute_layer) layer_set_frame(text_layer_get_layer(s_minute_layer), frames->minute);
   if (s_power_layer) layer_set_frame(text_layer_get_layer(s_power_layer), frames->power);
+  if (s_weather_layer) layer_set_frame(text_layer_get_layer(s_weather_layer), frames->weather);
   if (s_link_layer) layer_set_frame(s_link_layer, frames->link);
   if (s_quiet_layer) layer_set_frame(s_quiet_layer, frames->quiet);
 
@@ -221,6 +304,8 @@ static void meter_refresh(void) {
 }
 
 static void apply_settings(const Settings *s, bool redraw) {
+  bool was_show = s_show_weather;
+
   s_hour12_pref = s->clock;
 
   switch (s->hour_color) {
@@ -232,6 +317,8 @@ static void apply_settings(const Settings *s, bool redraw) {
   s_animate_pref = s->animate;
   s_vibe_pref = s->vibe_disconnect;
   s_battery_threshold = s->low_battery;
+  s_show_weather = s->show_weather;
+  s_fahrenheit = s->fahrenheit;
 
   if (redraw) {
     if (s_hour_layer) text_layer_set_text_color(s_hour_layer, s_hour_color);
@@ -239,7 +326,12 @@ static void apply_settings(const Settings *s, bool redraw) {
     time_t now = time(NULL);
     update_time(localtime(&now));
     update_power();
+    update_weather();
     meter_refresh();
+
+    if (!was_show && s_show_weather) {
+      settings_store_request_weather();
+    }
   }
 }
 
@@ -266,11 +358,12 @@ static void window_load(Window *window) {
   s_minute_layer = make_layer(frames->minute, GTextAlignmentRight, s_font_large, PAL_GOLD);
   s_meter_layer = meter_layer_create(frames->meter);
   s_power_layer = make_layer(frames->power, GTextAlignmentRight, s_font_label, PAL_GOLD);
+  s_weather_layer = make_layer(frames->weather, GTextAlignmentRight, s_font_label, PAL_ACCENT);
   s_link_layer = link_layer_create(frames->link);
   s_quiet_layer = quiet_layer_create(frames->quiet);
 
   if (!s_date_layer || !s_hour_layer || !s_ampm_layer || !s_minute_layer ||
-      !s_meter_layer || !s_power_layer || !s_link_layer || !s_quiet_layer) {
+      !s_meter_layer || !s_power_layer || !s_weather_layer || !s_link_layer || !s_quiet_layer) {
     APP_LOG(APP_LOG_LEVEL_ERROR, "layer create failed");
     return;
   }
@@ -281,6 +374,7 @@ static void window_load(Window *window) {
   layer_add_child(root, text_layer_get_layer(s_minute_layer));
   layer_add_child(root, s_meter_layer);
   layer_add_child(root, text_layer_get_layer(s_power_layer));
+  layer_add_child(root, text_layer_get_layer(s_weather_layer));
   layer_add_child(root, s_link_layer);
   layer_add_child(root, s_quiet_layer);
 
@@ -299,6 +393,7 @@ static void window_load(Window *window) {
   update_power();
   link_layer_set_linked(s_linked);
   quiet_layer_set_visible(s_quiet);
+  update_weather();
 
   tick_timer_service_subscribe(MINUTE_UNIT, tick_handler);
 
@@ -341,6 +436,10 @@ static void window_unload(Window *window) {
     text_layer_destroy(s_power_layer);
     s_power_layer = NULL;
   }
+  if (s_weather_layer) {
+    text_layer_destroy(s_weather_layer);
+    s_weather_layer = NULL;
+  }
   if (s_date_layer) {
     text_layer_destroy(s_date_layer);
     s_date_layer = NULL;
@@ -372,6 +471,16 @@ static void window_unload(Window *window) {
   }
 }
 
+static void load_weather_persist(void) {
+  WxPersist p;
+  int len = persist_read_data(WX_PERSIST_KEY, &p, sizeof(p));
+  if (len == sizeof(p) && p.version == 1) {
+    s_wx_cond = p.cond;
+    s_wx_temp_c10 = p.temp_c10;
+    s_wx_time = p.time;
+  }
+}
+
 static void init(void) {
   s_window = window_create();
   if (!s_window) {
@@ -385,8 +494,9 @@ static void init(void) {
     .unload = window_unload
   });
 
-  settings_store_init(on_settings_changed);
+  settings_store_init(on_settings_changed, on_weather_received);
   apply_settings(settings_store_get(), false);
+  load_weather_persist();
 
   window_stack_push(s_window, true);
 }

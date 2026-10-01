@@ -39,12 +39,17 @@ cells below 8 take heat(d+1). The baseline stays 550000.
 ### Requirement: States
 The meter SHALL be in exactly one of three modes, checked in this order:
 unlinked when the phone app is not connected (all bars 2 px, bars and baseline 555555, no cursor);
-frozen when the battery is at or below the threshold (default 20 %), quiet time is active, the
-animate setting is off, or quick view is showing; otherwise animating.
+frozen when the battery is at or below the threshold (default 20 %) and the watch is not charging
+or plugged in, quiet time is active, the animate setting is off, or quick view is showing;
+otherwise animating.
 
 #### Scenario: Unlinked wins
 - **WHEN** the phone disconnects while the battery is at 10 %
 - **THEN** the meter shows the unlinked style
+
+#### Scenario: Charging on low battery
+- **WHEN** the battery is at 15 % and the watch is charging
+- **THEN** the meter animates
 
 ### Requirement: Animation cost
 The frame timer (250 ms) SHALL run only in the animating mode while the face has focus, and
