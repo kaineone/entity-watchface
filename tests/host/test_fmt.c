@@ -63,5 +63,25 @@ int main(void) {
   fmt_date(buf, sizeof(buf), 6, 2, 1);
   CHECK_STR(buf, "sat 02.02");
 
+  char steps_buf[FMT_STEPS_LEN];
+  fmt_steps(steps_buf, sizeof(steps_buf), 6240);
+  CHECK_STR(steps_buf, "6240 steps");
+  fmt_steps(steps_buf, sizeof(steps_buf), 0);
+  CHECK_STR(steps_buf, "0 steps");
+  fmt_steps(steps_buf, sizeof(steps_buf), -1);
+  CHECK_STR(steps_buf, "-- steps");
+  fmt_steps(steps_buf, sizeof(steps_buf), 123456);
+  CHECK_STR(steps_buf, "123456 steps");
+
+  char bpm_buf[FMT_BPM_LEN];
+  fmt_bpm(bpm_buf, sizeof(bpm_buf), 72);
+  CHECK_STR(bpm_buf, "72 bpm");
+  fmt_bpm(bpm_buf, sizeof(bpm_buf), 0);
+  CHECK_STR(bpm_buf, "-- bpm");
+  fmt_bpm(bpm_buf, sizeof(bpm_buf), -5);
+  CHECK_STR(bpm_buf, "-- bpm");
+  fmt_bpm(bpm_buf, sizeof(bpm_buf), 180);
+  CHECK_STR(bpm_buf, "180 bpm");
+
   TEST_MAIN_END();
 }

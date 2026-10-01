@@ -34,12 +34,12 @@ static GFont s_font_large;
 static GFont s_font_small;
 static GFont s_font_label;
 
-static char s_date_buf[FMT_DATE_LEN];
+static char s_date_buf[FMT_STEPS_LEN];
 static char s_hour_buf[FMT_HOUR_LEN];
 static char s_minute_buf[FMT_MINUTE_LEN];
 static char s_ampm_buf[3];
 static char s_power_buf[STATUS_POWER_LEN];
-static char s_weather_buf[WEATHER_TEXT_LEN];
+static char s_weather_buf[WEATHER_TEXT_LEN > FMT_BPM_LEN ? WEATHER_TEXT_LEN : FMT_BPM_LEN];
 
 static GColor s_hour_color = PAL_HOUR_RED;
 static int8_t s_hour12_pref = -1;
@@ -71,7 +71,15 @@ static int32_t s_wx_time = 0;
 static AppTimer *s_meter_timer = NULL;
 static MeterMode s_meter_mode = MODE_FROZEN;
 
+static bool s_tap_pref = true;
+static bool s_swapped = false;
+static AppTimer *s_swap_timer = NULL;
+static bool s_tap_subscribed = false;
+
 static void meter_refresh(void);
+static void update_tap_subscription(void);
+static void swap_out(void);
+static void handle_tap(AccelAxisType axis, int32_t direction);
 
 static bool is_24h(void) {
   return s_hour12_pref == 0 || (s_hour12_pref == -1 && clock_is_24h_style());
@@ -79,6 +87,7 @@ static bool is_24h(void) {
 
 static void update_weather(void) {
   if (!s_weather_layer) return;
+  if (s_swapped) return;
 
   layer_set_hidden(text_layer_get_layer(s_weather_layer), !s_show_weather);
   if (!s_show_weather) return;
@@ -185,7 +194,7 @@ static void update_time(struct tm *tick_time) {
   }
 
   bool date_changed = false;
-  if (tick_time->tm_yday != s_last_yday) {
+  if (!s_swapped && tick_time->tm_yday != s_last_yday) {
     char dt[FMT_DATE_LEN];
     fmt_date(dt, sizeof(dt), tick_time->tm_wday, tick_time->tm_mday, tick_time->tm_mon);
     if (strcmp(s_date_buf, dt) != 0) {
@@ -303,6 +312,93 @@ static void meter_refresh(void) {
   }
 }
 
+static long read_steps(void) {
+  time_t start = time_start_of_today();
+  time_t end = time(NULL);
+  if (health_service_metric_accessible(HealthMetricStepCount, start, end) &
+      HealthServiceAccessibilityMaskAvailable) {
+    return (long)health_service_sum_today(HealthMetricStepCount);
+  }
+  return -1;
+}
+
+static long read_bpm(void) {
+  time_t end = time(NULL);
+  time_t start = end;  /* the HR guide checks (now, now) before peeking the current value */
+  if (health_service_metric_accessible(HealthMetricHeartRateBPM, start, end) &
+      HealthServiceAccessibilityMaskAvailable) {
+    return (long)health_service_peek_current_value(HealthMetricHeartRateBPM);
+  }
+  return -1;
+}
+
+static void swap_timer_cb(void *data) {
+  (void)data;
+  s_swap_timer = NULL;
+  swap_out();
+}
+
+static void swap_in(void) {
+  s_swapped = true;
+
+  char tmp[FMT_STEPS_LEN];
+  long steps = read_steps();
+  fmt_steps(tmp, sizeof(tmp), steps);
+  if (strcmp(s_date_buf, tmp) != 0) {
+    strcpy(s_date_buf, tmp);
+    if (s_date_layer) text_layer_set_text(s_date_layer, s_date_buf);
+  }
+
+  char wx_tmp[FMT_BPM_LEN];
+  long bpm = read_bpm();
+  fmt_bpm(wx_tmp, sizeof(wx_tmp), bpm);
+  if (strcmp(s_weather_buf, wx_tmp) != 0) {
+    strcpy(s_weather_buf, wx_tmp);
+    if (s_weather_layer) text_layer_set_text(s_weather_layer, s_weather_buf);
+  }
+  if (s_weather_layer) {
+    layer_set_hidden(text_layer_get_layer(s_weather_layer), false);
+    text_layer_set_text_color(s_weather_layer, PAL_ACCENT);
+  }
+  s_wx_color_set = false;
+
+  if (s_swap_timer) app_timer_cancel(s_swap_timer);
+  s_swap_timer = app_timer_register(10000, swap_timer_cb, NULL);
+}
+
+static void swap_out(void) {
+  if (s_swap_timer) {
+    app_timer_cancel(s_swap_timer);
+    s_swap_timer = NULL;
+  }
+  s_swapped = false;
+  s_date_buf[0] = '\0';
+  s_last_yday = -1;
+  s_weather_buf[0] = '\0';
+  s_wx_color_set = false;
+  time_t now = time(NULL);
+  update_time(localtime(&now));
+  update_weather();
+}
+
+static void handle_tap(AccelAxisType axis, int32_t direction) {
+  (void)axis;
+  (void)direction;
+  if (!s_tap_pref) return;
+  if (s_swapped) swap_out(); else swap_in();
+}
+
+static void update_tap_subscription(void) {
+  if (s_tap_pref && !s_tap_subscribed) {
+    accel_tap_service_subscribe(handle_tap);
+    s_tap_subscribed = true;
+  } else if (!s_tap_pref && s_tap_subscribed) {
+    accel_tap_service_unsubscribe();
+    s_tap_subscribed = false;
+    if (s_swapped) swap_out();
+  }
+}
+
 static void apply_settings(const Settings *s, bool redraw) {
   bool was_show = s_show_weather;
 
@@ -319,6 +415,7 @@ static void apply_settings(const Settings *s, bool redraw) {
   s_battery_threshold = s->low_battery;
   s_show_weather = s->show_weather;
   s_fahrenheit = s->fahrenheit;
+  s_tap_pref = s->tap_swap;
 
   if (redraw) {
     if (s_hour_layer) text_layer_set_text_color(s_hour_layer, s_hour_color);
@@ -333,6 +430,8 @@ static void apply_settings(const Settings *s, bool redraw) {
       settings_store_request_weather();
     }
   }
+
+  if (s_date_layer) update_tap_subscription();
 }
 
 static void on_settings_changed(const Settings *s) {
@@ -409,11 +508,22 @@ static void window_load(Window *window) {
     .did_focus = handle_focus
   });
 
+  update_tap_subscription();
   meter_refresh();
 }
 
 static void window_unload(Window *window) {
   (void)window;
+
+  if (s_swap_timer) {
+    app_timer_cancel(s_swap_timer);
+    s_swap_timer = NULL;
+  }
+  if (s_tap_subscribed) {
+    accel_tap_service_unsubscribe();
+    s_tap_subscribed = false;
+  }
+  s_swapped = false;
 
   if (s_meter_timer) {
     app_timer_cancel(s_meter_timer);
