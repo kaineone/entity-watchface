@@ -2,6 +2,7 @@
 #include "logic/fmt.h"
 #include "layout.h"
 #include "palette.h"
+#include "meter_layer.h"
 
 #include <stdint.h>
 
@@ -10,6 +11,7 @@ static TextLayer *s_date_layer;
 static TextLayer *s_hour_layer;
 static TextLayer *s_ampm_layer;
 static TextLayer *s_minute_layer;
+static Layer *s_meter_layer;
 
 static GFont s_font_large;
 static GFont s_font_small;
@@ -26,6 +28,18 @@ static int8_t s_hour12_pref = -1;
 static int s_last_yday = -1;
 static bool s_peek = false;
 static bool s_layout_applied = false;
+
+static bool s_linked = false;
+static bool s_quiet = false;
+static bool s_focused = true;
+static bool s_animate_pref = true;
+static int s_battery_pct = 100;
+static int s_battery_threshold = 20;
+
+static AppTimer *s_meter_timer = NULL;
+static MeterMode s_meter_mode = MODE_FROZEN;
+
+static void meter_refresh(void);
 
 static bool is_24h(void) {
   return s_hour12_pref == 0 || (s_hour12_pref == -1 && clock_is_24h_style());
@@ -74,6 +88,8 @@ static void update_time(struct tm *tick_time) {
 static void tick_handler(struct tm *tick_time, TimeUnits units_changed) {
   (void)units_changed;
   update_time(tick_time);
+  s_quiet = quiet_time_is_active();
+  meter_refresh();
 }
 
 static void apply_layout(bool peek) {
@@ -94,12 +110,18 @@ static void apply_layout(bool peek) {
   if (s_minute_layer) {
     text_layer_set_font(s_minute_layer, frames->digits == DIGITS_LARGE ? s_font_large : s_font_small);
   }
+
+  if (s_meter_layer) {
+    layer_set_frame(s_meter_layer, frames->meter);
+    layer_set_hidden(s_meter_layer, peek);
+  }
 }
 
 static void unobstructed_did_change(void *context) {
   (void)context;
   Layer *root = window_get_root_layer(s_window);
   apply_layout(layer_get_unobstructed_bounds(root).size.h < layer_get_bounds(root).size.h);
+  meter_refresh();
 }
 
 static TextLayer *make_layer(GRect frame, GTextAlignment align, GFont font, GColor text_color) {
@@ -114,6 +136,45 @@ static TextLayer *make_layer(GRect frame, GTextAlignment align, GFont font, GCol
   text_layer_set_font(layer, font);
   text_layer_set_overflow_mode(layer, GTextOverflowModeTrailingEllipsis);
   return layer;
+}
+
+static void handle_connection(bool connected) {
+  s_linked = connected;
+  meter_refresh();
+}
+
+static void handle_battery(BatteryChargeState charge) {
+  s_battery_pct = charge.charge_percent;
+  meter_refresh();
+}
+
+static void handle_focus(bool in_focus) {
+  s_focused = in_focus;
+  meter_refresh();
+}
+
+static void meter_timer_cb(void *data) {
+  (void)data;
+  s_meter_timer = NULL;
+  meter_layer_step();
+  if (meter_timer_should_run(s_meter_mode, s_focused)) {
+    s_meter_timer = app_timer_register(250, meter_timer_cb, NULL);
+  }
+}
+
+static void meter_refresh(void) {
+  MeterMode mode = meter_mode(s_linked, s_animate_pref, s_battery_pct,
+                              s_battery_threshold, s_quiet, s_peek);
+  meter_layer_set_mode(mode);
+  s_meter_mode = mode;
+
+  bool run = meter_timer_should_run(mode, s_focused);
+  if (run && !s_meter_timer) {
+    s_meter_timer = app_timer_register(250, meter_timer_cb, NULL);
+  } else if (!run && s_meter_timer) {
+    app_timer_cancel(s_meter_timer);
+    s_meter_timer = NULL;
+  }
 }
 
 static void window_load(Window *window) {
@@ -133,7 +194,9 @@ static void window_load(Window *window) {
   s_hour_layer = make_layer(frames->hour, GTextAlignmentLeft, s_font_large, s_hour_color);
   s_ampm_layer = make_layer(frames->ampm, GTextAlignmentRight, s_font_label, PAL_GOLD);
   s_minute_layer = make_layer(frames->minute, GTextAlignmentRight, s_font_large, PAL_GOLD);
-  if (!s_date_layer || !s_hour_layer || !s_ampm_layer || !s_minute_layer) {
+  s_meter_layer = meter_layer_create(frames->meter);
+
+  if (!s_date_layer || !s_hour_layer || !s_ampm_layer || !s_minute_layer || !s_meter_layer) {
     APP_LOG(APP_LOG_LEVEL_ERROR, "layer create failed");
     return;
   }
@@ -142,6 +205,7 @@ static void window_load(Window *window) {
   layer_add_child(root, text_layer_get_layer(s_hour_layer));
   layer_add_child(root, text_layer_get_layer(s_ampm_layer));
   layer_add_child(root, text_layer_get_layer(s_minute_layer));
+  layer_add_child(root, s_meter_layer);
 
   const bool peek = layer_get_unobstructed_bounds(root).size.h < layer_get_bounds(root).size.h;
   apply_layout(peek);
@@ -154,10 +218,36 @@ static void window_load(Window *window) {
   unobstructed_area_service_subscribe((UnobstructedAreaHandlers) {
     .did_change = unobstructed_did_change
   }, NULL);
+
+  s_linked = connection_service_peek_pebble_app_connection();
+  s_battery_pct = battery_state_service_peek().charge_percent;
+  s_quiet = quiet_time_is_active();
+
+  connection_service_subscribe((ConnectionHandlers) {
+    .pebble_app_connection_handler = handle_connection
+  });
+  battery_state_service_subscribe(handle_battery);
+  app_focus_service_subscribe_handlers((AppFocusHandlers) {
+    .did_focus = handle_focus
+  });
+
+  meter_refresh();
 }
 
 static void window_unload(Window *window) {
   (void)window;
+
+  if (s_meter_timer) {
+    app_timer_cancel(s_meter_timer);
+    s_meter_timer = NULL;
+  }
+
+  connection_service_unsubscribe();
+  battery_state_service_unsubscribe();
+  app_focus_service_unsubscribe();
+
+  meter_layer_destroy();
+  s_meter_layer = NULL;
 
   if (s_date_layer) {
     text_layer_destroy(s_date_layer);

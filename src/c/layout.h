@@ -10,6 +10,7 @@ typedef struct {
   GRect hour;
   GRect ampm;
   GRect minute;
+  GRect meter;
   DigitSize digits;
 } FaceFrames;
 

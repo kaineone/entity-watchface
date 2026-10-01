@@ -8,6 +8,7 @@ static const FaceLayout s_layout = {
     .hour   = GRect(8, 30, 184, 64),
     .ampm   = GRect(140, 36, 52, 16),
     .minute = GRect(8, 96, 184, 64),
+    .meter  = GRect(6, 176, 189, 26),
     .digits = DIGITS_LARGE
   },
   .peek = {
@@ -15,6 +16,7 @@ static const FaceLayout s_layout = {
     .hour   = GRect(8, 30, 184, 48),
     .ampm   = GRect(140, 36, 52, 16),
     .minute = GRect(8, 80, 184, 48),
+    .meter  = GRect(6, 176, 189, 26),
     .digits = DIGITS_SMALL
   }
 };
@@ -25,6 +27,7 @@ static const FaceLayout s_layout = {
     .hour   = GRect(8, 30, 184, 64),
     .ampm   = GRect(140, 36, 52, 16),
     .minute = GRect(8, 96, 184, 64),
+    .meter  = GRect(6, 176, 189, 26),
     .digits = DIGITS_LARGE
   },
   .peek = {
@@ -32,6 +35,7 @@ static const FaceLayout s_layout = {
     .hour   = GRect(8, 30, 184, 48),
     .ampm   = GRect(140, 36, 52, 16),
     .minute = GRect(8, 80, 184, 48),
+    .meter  = GRect(6, 176, 189, 26),
     .digits = DIGITS_SMALL
   }
 };
