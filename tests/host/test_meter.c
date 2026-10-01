@@ -151,6 +151,30 @@ static void test_bayer(void) {
   CHECK_EQ_INT(count, 8);
 }
 
+static void test_bayer_value(void) {
+  CHECK_EQ_INT(meter_bayer_value(0, 0), 0);
+  CHECK_EQ_INT(meter_bayer_value(1, 0), 8);
+  CHECK_EQ_INT(meter_bayer_value(3, 3), 5);
+  CHECK_EQ_INT(meter_bayer_value(4, 5), 12);
+  CHECK_EQ_INT(meter_bayer_value(-1, 0), 10);
+  for (int y = 0; y < 4; y++) {
+    for (int x = 0; x < 4; x++) {
+      CHECK_EQ_INT(meter_bayer_cool(x, y), meter_bayer_value(x, y) < 8);
+    }
+  }
+}
+
+static void test_ink_density(void) {
+  CHECK_EQ_INT(meter_ink_density(INK_RED), 16);
+  CHECK_EQ_INT(meter_ink_density(INK_HEAT1), 14);
+  CHECK_EQ_INT(meter_ink_density(INK_HEAT2), 12);
+  CHECK_EQ_INT(meter_ink_density(INK_HEAT3), 10);
+  CHECK_EQ_INT(meter_ink_density(INK_HEAT4), 9);
+  CHECK_EQ_INT(meter_ink_density(INK_GOLD), 8);
+  CHECK_EQ_INT(meter_ink_density(INK_BASELINE), 4);
+  CHECK_EQ_INT(meter_ink_density(INK_DISABLED), 2);
+}
+
 int main(void) {
   test_rest_bounds();
   test_bounce();
@@ -161,5 +185,7 @@ int main(void) {
   test_meter_mode();
   test_timer_should_run();
   test_bayer();
+  test_bayer_value();
+  test_ink_density();
   TEST_MAIN_END();
 }

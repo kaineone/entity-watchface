@@ -97,7 +97,7 @@ MeterInk meter_baseline_ink(MeterMode mode) {
   return (mode == MODE_UNLINKED) ? INK_DISABLED : INK_BASELINE;
 }
 
-bool meter_bayer_cool(int x, int y) {
+int meter_bayer_value(int x, int y) {
   static const uint8_t matrix[16] = {
     0, 8, 2, 10,
     12, 4, 14, 6,
@@ -106,7 +106,25 @@ bool meter_bayer_cool(int x, int y) {
   };
   int xi = ((x % 4) + 4) % 4;
   int yi = ((y % 4) + 4) % 4;
-  return matrix[yi * 4 + xi] < 8;
+  return (int)matrix[yi * 4 + xi];
+}
+
+bool meter_bayer_cool(int x, int y) {
+  return meter_bayer_value(x, y) < 8;
+}
+
+int meter_ink_density(MeterInk ink) {
+  switch (ink) {
+    case INK_RED:      return 16;
+    case INK_HEAT1:    return 14;
+    case INK_HEAT2:    return 12;
+    case INK_HEAT3:    return 10;
+    case INK_HEAT4:    return 9;
+    case INK_GOLD:     return 8;
+    case INK_BASELINE: return 4;
+    case INK_DISABLED: return 2;
+    default:           return 0;
+  }
 }
 
 MeterMode meter_mode(bool linked, bool animate_pref, int battery_pct, int threshold, bool charging, bool quiet, bool peek) {

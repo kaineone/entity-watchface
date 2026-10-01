@@ -12,6 +12,7 @@ static uint8_t s_pitch = 9;
 static uint8_t s_bar_w = 7;
 static uint8_t s_max_h = 22;
 
+#if defined(PBL_COLOR)
 static GColor color_for_ink(MeterInk ink) {
   switch (ink) {
     case INK_GOLD:     return PAL_GOLD;
@@ -25,6 +26,7 @@ static GColor color_for_ink(MeterInk ink) {
     default:           return PAL_DISABLED;
   }
 }
+#endif
 
 static void update_proc(Layer *layer, GContext *ctx) {
   graphics_context_set_antialiased(ctx, false);
@@ -45,6 +47,24 @@ static void update_proc(Layer *layer, GContext *ctx) {
     const int x = i * s_pitch;
     const GRect bar = GRect(x, s_max_h - h, s_bar_w, h);
 
+#if defined(PBL_BW)
+    const int density = meter_ink_density(s.ink);
+    if (density >= 16) {
+      graphics_context_set_fill_color(ctx, GColorWhite);
+      graphics_fill_rect(ctx, bar, 0, GCornersAll);
+    } else {
+      graphics_context_set_stroke_color(ctx, GColorWhite);
+      for (int dx = 0; dx < s_bar_w; dx++) {
+        const int abs_x = f.origin.x + x + dx;
+        for (int y = bar.origin.y; y < bar.origin.y + bar.size.h; y++) {
+          const int abs_y = f.origin.y + y;
+          if (meter_bayer_value(abs_x, abs_y) < density) {
+            graphics_draw_pixel(ctx, GPoint(x + dx, y));
+          }
+        }
+      }
+    }
+#else
     graphics_context_set_fill_color(ctx, color_for_ink(s.ink));
     graphics_fill_rect(ctx, bar, 0, GCornersAll);
 
@@ -60,10 +80,31 @@ static void update_proc(Layer *layer, GContext *ctx) {
         }
       }
     }
+#endif
 
     const GRect base = GRect(x, s_max_h + 2, s_bar_w, 2);
+
+#if defined(PBL_BW)
+    const int base_density = meter_ink_density(meter_baseline_ink(s_mode));
+    if (base_density >= 16) {
+      graphics_context_set_fill_color(ctx, GColorWhite);
+      graphics_fill_rect(ctx, base, 0, GCornersAll);
+    } else {
+      graphics_context_set_stroke_color(ctx, GColorWhite);
+      for (int dx = 0; dx < base.size.w; dx++) {
+        const int abs_x = f.origin.x + base.origin.x + dx;
+        for (int y = base.origin.y; y < base.origin.y + base.size.h; y++) {
+          const int abs_y = f.origin.y + y;
+          if (meter_bayer_value(abs_x, abs_y) < base_density) {
+            graphics_draw_pixel(ctx, GPoint(base.origin.x + dx, y));
+          }
+        }
+      }
+    }
+#else
     graphics_context_set_fill_color(ctx, color_for_ink(meter_baseline_ink(s_mode)));
     graphics_fill_rect(ctx, base, 0, GCornersAll);
+#endif
   }
 }
 

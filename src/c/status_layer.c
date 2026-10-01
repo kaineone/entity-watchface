@@ -1,5 +1,6 @@
 #include "status_layer.h"
 #include "palette.h"
+#include "logic/meter.h"
 
 static Layer *s_link_layer = NULL;
 static bool s_link_linked = true;
@@ -8,11 +9,31 @@ static Layer *s_quiet_layer = NULL;
 static bool s_quiet_visible = false;
 
 static void link_update_proc(Layer *layer, GContext *ctx) {
-  (void)layer;
   const int heights[4] = {5, 8, 11, 14};
   const int layer_h = 14;
 
   graphics_context_set_antialiased(ctx, false);
+
+#if defined(PBL_BW)
+  if (!s_link_linked) {
+    const GRect f = layer_get_frame(layer);
+    graphics_context_set_stroke_color(ctx, GColorWhite);
+    for (int k = 0; k < 4; k++) {
+      const GRect bar = GRect(k * 6, layer_h - heights[k], 4, heights[k]);
+      for (int dx = 0; dx < bar.size.w; dx++) {
+        const int abs_x = f.origin.x + bar.origin.x + dx;
+        for (int y = bar.origin.y; y < bar.origin.y + bar.size.h; y++) {
+          const int abs_y = f.origin.y + y;
+          if (meter_bayer_value(abs_x, abs_y) < 4) {
+            graphics_draw_pixel(ctx, GPoint(bar.origin.x + dx, y));
+          }
+        }
+      }
+    }
+    return;
+  }
+#endif
+
   graphics_context_set_fill_color(ctx, s_link_linked ? PAL_GOLD : PAL_DISABLED);
 
   for (int k = 0; k < 4; k++) {

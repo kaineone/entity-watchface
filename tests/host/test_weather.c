@@ -58,6 +58,8 @@ int main(void) {
   CHECK_STR(buf, "clear -12\xC2\xB0");
   weather_text_variant(buf, sizeof(buf), 0, -120, false, true, 2);
   CHECK_STR(buf, "clear-12\xC2\xB0");
+  weather_text_variant(buf, sizeof(buf), 0, -120, false, true, 3);
+  CHECK_STR(buf, "clear-12");
 
   weather_text_variant(buf, sizeof(buf), 2, 370, false, false, 0);
   CHECK_STR(buf, "rain 37\xC2\xB0");
@@ -65,6 +67,8 @@ int main(void) {
   CHECK_STR(buf, "rain 37\xC2\xB0");
   weather_text_variant(buf, sizeof(buf), 2, 370, false, false, 2);
   CHECK_STR(buf, "rain37\xC2\xB0");
+  weather_text_variant(buf, sizeof(buf), 2, 370, false, false, 3);
+  CHECK_STR(buf, "rain37");
 
   weather_text_variant(buf, sizeof(buf), 3, -400, true, true, 0);
   CHECK_STR(buf, "~storm -40\xC2\xB0");
@@ -72,6 +76,8 @@ int main(void) {
   CHECK_STR(buf, "storm -40\xC2\xB0");
   weather_text_variant(buf, sizeof(buf), 3, -400, true, true, 2);
   CHECK_STR(buf, "storm-40\xC2\xB0");
+  weather_text_variant(buf, sizeof(buf), 3, -400, true, true, 3);
+  CHECK_STR(buf, "storm-40");
 
   weather_text(buf, sizeof(buf), 1, 183, false, true);
   CHECK_STR(buf, "~cloud 18\xC2\xB0");
@@ -83,10 +89,13 @@ int main(void) {
   weather_text_variant(buf, sizeof(buf), 4, -34, false, false, 0);
   CHECK_STR(buf, "snow -3\xC2\xB0");
 
+  weather_text_variant(buf, sizeof(buf), 1, 183, false, false, 3);
+  CHECK_STR(buf, "cloud18");
+
   weather_text_variant(buf, sizeof(buf), 0, -120, false, true, -3);
   CHECK_STR(buf, "~clear -12\xC2\xB0");
   weather_text_variant(buf, sizeof(buf), 0, -120, false, true, 5);
-  CHECK_STR(buf, "clear-12\xC2\xB0");
+  CHECK_STR(buf, "clear-12");
 
   TEST_MAIN_END();
 }

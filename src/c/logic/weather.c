@@ -24,12 +24,13 @@ int weather_round_c10(int temp_c10, bool fahrenheit) {
 
 void weather_text_variant(char *buf, size_t n, int cond, int temp_c10, bool fahrenheit, bool stale, int level) {
   if (level < 0) level = 0;
-  else if (level > 2) level = 2;
+  else if (level > 3) level = 3;
 
   int t = weather_round_c10(temp_c10, fahrenheit);
   const char *prefix = (stale && level == 0) ? "~" : "";
   const char *sep = (level <= 1) ? " " : "";
-  snprintf(buf, n, "%s%s%s%d\xC2\xB0", prefix, weather_word(cond), sep, t);
+  const char *deg = (level <= 2) ? "\xC2\xB0" : "";
+  snprintf(buf, n, "%s%s%s%d%s", prefix, weather_word(cond), sep, t, deg);
 }
 
 void weather_text(char *buf, size_t n, int cond, int temp_c10, bool fahrenheit, bool stale) {
