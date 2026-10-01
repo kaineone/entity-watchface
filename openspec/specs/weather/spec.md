@@ -53,3 +53,12 @@ restart, with staleness judged from the stored time. Before any reading exists, 
 #### Scenario: Phone away for an hour
 - **WHEN** 61 minutes pass since the last update
 - **THEN** the readout reads `~clear 18°` in 555555
+
+### Requirement: Last-resort fit
+If a reading still does not fit beside the date after dropping the `~` and the space, the
+degree sign SHALL be dropped as well (`clear-12`). On black-and-white platforms the `~` of a
+stale reading is never dropped, so the steps there are: drop the space, then drop the degree sign.
+
+#### Scenario: Stale long reading on flint
+- **WHEN** a stale `-12°` clear reading must fit beside `thu 01.10` on flint
+- **THEN** the readout shows `~clear-12`
