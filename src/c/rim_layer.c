@@ -1,4 +1,5 @@
 #include "rim_layer.h"
+#include "layout.h"
 #include "palette.h"
 
 static Layer *s_layer = NULL;
@@ -9,6 +10,9 @@ static int s_second = 0;
 static int s_last_land = -1;
 static int32_t s_sin[RIM_TICKS];
 static int32_t s_cos[RIM_TICKS];
+
+static uint8_t s_outer_r = 127;
+static uint8_t s_max_len = RIM_MAX_LEN;
 
 static GColor ink_color(MeterInk ink) {
   switch (ink) {
@@ -29,7 +33,7 @@ static void update_proc(Layer *layer, GContext *ctx) {
   GRect b = layer_get_bounds(s_layer);
   int32_t cx = b.size.w / 2;
   int32_t cy = b.size.h / 2;
-  int32_t orad = 127;
+  int32_t orad = s_outer_r;
 
   graphics_context_set_antialiased(ctx, false);
   graphics_context_set_stroke_width(ctx, 1);
@@ -38,7 +42,15 @@ static void update_proc(Layer *layer, GContext *ctx) {
     TickStyle st = rim_tick(&s_rim, s_mode, s_minute, s_second, i);
     if (st.len == 0) continue;
 
-    int32_t irad = orad - st.len;
+    int len = st.len;
+    if (s_max_len != RIM_MAX_LEN) {
+      len = (len * s_max_len + RIM_MAX_LEN / 2) / RIM_MAX_LEN;
+    }
+    if (len < RIM_FLAT_LEN) {
+      len = RIM_FLAT_LEN;
+    }
+
+    int32_t irad = orad - len;
     int32_t sx = s_sin[i];
     int32_t c = s_cos[i];
 
@@ -58,6 +70,10 @@ Layer *rim_layer_create(GRect frame) {
   s_minute = 0;
   s_second = 0;
   s_last_land = -1;
+
+  const FaceLayout *layout = layout_get();
+  s_outer_r = layout->rim_outer_r;
+  s_max_len = layout->rim_max_len;
 
   for (int i = 0; i < RIM_TICKS; i++) {
     int32_t angle = TRIG_MAX_ANGLE * i / RIM_TICKS;

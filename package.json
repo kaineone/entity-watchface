@@ -21,7 +21,9 @@
     ],
     "targetPlatforms": [
       "emery",
-      "gabbro"
+      "gabbro",
+      "basalt",
+      "chalk"
     ],
     "watchapp": {
       "watchface": true
@@ -45,25 +47,68 @@
           "type": "font",
           "name": "ZEN_64",
           "file": "fonts/ZenDots-Regular.ttf",
-          "characterRegex": "[0-9]"
+          "characterRegex": "[0-9]",
+          "targetPlatforms": [
+            "emery"
+          ]
         },
         {
           "type": "font",
           "name": "ZEN_60",
           "file": "fonts/ZenDots-Regular.ttf",
-          "characterRegex": "[0-9]"
+          "characterRegex": "[0-9]",
+          "targetPlatforms": [
+            "gabbro"
+          ]
         },
         {
           "type": "font",
           "name": "ZEN_48",
           "file": "fonts/ZenDots-Regular.ttf",
-          "characterRegex": "[0-9]"
+          "characterRegex": "[0-9]",
+          "targetPlatforms": [
+            "emery",
+            "gabbro",
+            "basalt"
+          ]
+        },
+        {
+          "type": "font",
+          "name": "ZEN_42",
+          "file": "fonts/ZenDots-Regular.ttf",
+          "characterRegex": "[0-9]",
+          "targetPlatforms": [
+            "chalk"
+          ]
+        },
+        {
+          "type": "font",
+          "name": "ZEN_36",
+          "file": "fonts/ZenDots-Regular.ttf",
+          "characterRegex": "[0-9]",
+          "targetPlatforms": [
+            "basalt"
+          ]
         },
         {
           "type": "font",
           "name": "LABEL_16",
           "file": "fonts/JetBrainsMono-Medium.ttf",
-          "characterRegex": "[a-z0-9 .°%+~-]"
+          "characterRegex": "[a-z0-9 .°%+~-]",
+          "targetPlatforms": [
+            "emery",
+            "gabbro"
+          ]
+        },
+        {
+          "type": "font",
+          "name": "LABEL_12",
+          "file": "fonts/JetBrainsMono-Medium.ttf",
+          "characterRegex": "[a-z0-9 .°%+~-]",
+          "targetPlatforms": [
+            "basalt",
+            "chalk"
+          ]
         }
       ]
     }

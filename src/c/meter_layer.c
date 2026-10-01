@@ -1,4 +1,5 @@
 #include <pebble.h>
+#include "layout.h"
 #include "meter_layer.h"
 #include "logic/meter.h"
 #include "palette.h"
@@ -6,6 +7,10 @@
 static Layer *s_layer;
 static Meter s_meter;
 static MeterMode s_mode;
+
+static uint8_t s_pitch = 9;
+static uint8_t s_bar_w = 7;
+static uint8_t s_max_h = 22;
 
 static GColor color_for_ink(MeterInk ink) {
   switch (ink) {
@@ -28,15 +33,24 @@ static void update_proc(Layer *layer, GContext *ctx) {
 
   for (int i = 0; i < METER_BARS; i++) {
     const BarStyle s = meter_bar(&s_meter, s_mode, i);
-    const int x = i * 9;
-    const GRect bar = GRect(x, 22 - s.height, 7, s.height);
+
+    int h = s.height;
+    if (s_max_h != METER_MAX_H) {
+      h = (h * s_max_h + METER_MAX_H / 2) / METER_MAX_H;
+    }
+    if (h < METER_FLAT_H) {
+      h = METER_FLAT_H;
+    }
+
+    const int x = i * s_pitch;
+    const GRect bar = GRect(x, s_max_h - h, s_bar_w, h);
 
     graphics_context_set_fill_color(ctx, color_for_ink(s.ink));
     graphics_fill_rect(ctx, bar, 0, GCornersAll);
 
     if (s.dither) {
       graphics_context_set_stroke_color(ctx, color_for_ink(s.ink_cool));
-      for (int dx = 0; dx < 7; dx++) {
+      for (int dx = 0; dx < s_bar_w; dx++) {
         const int abs_x = f.origin.x + x + dx;
         for (int y = bar.origin.y; y < bar.origin.y + bar.size.h; y++) {
           const int abs_y = f.origin.y + y;
@@ -47,13 +61,18 @@ static void update_proc(Layer *layer, GContext *ctx) {
       }
     }
 
-    const GRect base = GRect(x, 24, 7, 2);
+    const GRect base = GRect(x, s_max_h + 2, s_bar_w, 2);
     graphics_context_set_fill_color(ctx, color_for_ink(meter_baseline_ink(s_mode)));
     graphics_fill_rect(ctx, base, 0, GCornersAll);
   }
 }
 
 Layer *meter_layer_create(GRect frame) {
+  const FaceLayout *layout = layout_get();
+  s_pitch = layout->meter_pitch;
+  s_bar_w = layout->meter_bar_w;
+  s_max_h = layout->meter_max_h;
+
   s_layer = layer_create(frame);
   if (!s_layer) return NULL;
 
