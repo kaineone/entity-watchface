@@ -1,0 +1,13 @@
+build/
+node_modules/
+.lock-waf*
+.waf*
+*.pyc
+__pycache__/
+/tests/host/bin/
+.remember/
+.claude/settings.local.json
+# Worker briefs and raw outputs
+/.work/
+# Client design handoff (branded); local only
+/design/

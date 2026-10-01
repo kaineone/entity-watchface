@@ -1,0 +1,47 @@
+schema: spec-driven
+
+context: |
+  Native C Pebble watchface "Entity" + PebbleKit JS, SDK 4.33.1.
+  Targets: emery (Pebble Time 2, 200x228) first, gabbro (Pebble Round 2, 260x260) second;
+  legacy platforms later via PBL_* feature macros and per-platform layout tables.
+  Design spec of record: design/handoff/README.md (pixel-exact, local only, gitignored; never commit it). Research: docs/research/.
+  Battery efficiency is a primary requirement: MINUTE_UNIT ticks, AppTimer only while animating,
+  dirty only changed layers, freeze animation at battery <= configurable threshold (default 20%),
+  quiet time, quick view, unfocused, or animate-off.
+  Pure logic (heat ramp, meter math, formatting) lives in Pebble-free C modules unit-tested on the host
+  (tests/host, plain gcc). CI: GitHub Actions builds the .pbw for all targets and runs host tests.
+  Config via pebble-clay; weather via Open-Meteo (no API key).
+rules:
+  tasks:
+    - Each task must be independently verifiable (build, host test, or emulator screenshot)
+
+# Project context (optional)
+# This is shown to AI when creating artifacts.
+# Add your tech stack, conventions, style guides, domain knowledge, etc.
+# Example:
+#   context: |
+#     Tech stack: TypeScript, React, Node.js
+#     We use conventional commits
+#     Domain: e-commerce platform
+
+# Per-artifact rules (optional)
+# Add custom rules for specific artifacts.
+# Example:
+#   rules:
+#     proposal:
+#       - Keep proposals under 500 words
+#       - Always include a "Non-goals" section
+#     tasks:
+#       - Break tasks into chunks of max 2 hours
+
+# Per-operation guidance (optional)
+# Add advisory guidance for how apply and archive work should be conducted.
+# This is separate from artifact rules above.
+# Example:
+#   operations:
+#     apply:
+#       guidance:
+#         - Keep test summaries concise
+#     archive:
+#       guidance:
+#         - Summarize the archive outcome before finishing
