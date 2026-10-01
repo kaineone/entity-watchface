@@ -74,6 +74,8 @@ static int s_battery_pct = 100;
 static int s_battery_threshold = 20;
 static StatusInk s_power_ink;
 static bool s_power_ink_set = false;
+static GRect s_power_frame;
+static GTextAlignment s_power_align;
 
 static int s_wx_cond = 0;
 static int s_wx_temp_c10 = 0;
@@ -120,13 +122,29 @@ static void update_weather(void) {
     int max_w = weather_frame.origin.x + weather_frame.size.w - (date_frame.origin.x + date_w + 4);
 
     if (date_frame.origin.y == weather_frame.origin.y) {
-      for (int level = 0; level <= 2; level++) {
+#if defined(PBL_BW)
+      const int levels[3] = {0, 2, 3};
+      for (int idx = 0; idx < 3; idx++) {
+        int level = levels[idx];
+        weather_text_variant(text, sizeof(text), s_wx_cond, s_wx_temp_c10, s_fahrenheit, stale, level);
+        if ((level == 2 || level == 3) && stale) {
+          memmove(text + 1, text, strlen(text) + 1);
+          text[0] = '~';
+        }
+        GSize size = graphics_text_layout_get_content_size(text, s_font_label, GRect(0, 0, 200, weather_frame.size.h),
+                                                           GTextOverflowModeTrailingEllipsis,
+                                                           GTextAlignmentRight);
+        if (size.w <= max_w) break;
+      }
+#else
+      for (int level = 0; level <= 3; level++) {
         weather_text_variant(text, sizeof(text), s_wx_cond, s_wx_temp_c10, s_fahrenheit, stale, level);
         GSize size = graphics_text_layout_get_content_size(text, s_font_label, GRect(0, 0, 200, weather_frame.size.h),
                                                            GTextOverflowModeTrailingEllipsis,
                                                            GTextAlignmentRight);
         if (size.w <= max_w) break;
       }
+#endif
     } else {
       weather_text_variant(text, sizeof(text), s_wx_cond, s_wx_temp_c10, s_fahrenheit, stale, 0);
     }
@@ -165,21 +183,45 @@ static void update_power(void) {
   char tmp[STATUS_POWER_LEN];
   status_power_text(tmp, sizeof(tmp), s_battery_pct, s_charging);
 
-  if (strcmp(s_power_buf, tmp) != 0) {
+  bool text_changed = strcmp(s_power_buf, tmp) != 0;
+  if (text_changed) {
     strcpy(s_power_buf, tmp);
     if (s_power_layer) text_layer_set_text(s_power_layer, s_power_buf);
   }
 
   StatusInk ink = status_power_ink(s_battery_pct, s_battery_threshold, s_charging);
-  if (!s_power_ink_set || ink != s_power_ink) {
+  bool ink_changed = !s_power_ink_set || ink != s_power_ink;
+  if (ink_changed) {
     s_power_ink = ink;
     s_power_ink_set = true;
-    if (s_power_layer) {
+  }
+
+  if (s_power_layer) {
+#if defined(PBL_BW)
+    if (ink == STATUS_RED) {
+      layer_set_frame(text_layer_get_layer(s_power_layer), s_power_frame);
+      GSize size = text_layer_get_content_size(s_power_layer);
+      int w = size.w;
+      int right = s_power_frame.origin.x + s_power_frame.size.w;
+      GRect r = GRect(right - (w + 4), s_power_frame.origin.y, w + 4, s_power_frame.size.h);
+      layer_set_frame(text_layer_get_layer(s_power_layer), r);
+      text_layer_set_text_alignment(s_power_layer, GTextAlignmentCenter);
+      text_layer_set_background_color(s_power_layer, GColorWhite);
+      text_layer_set_text_color(s_power_layer, GColorBlack);
+    } else {
+      layer_set_frame(text_layer_get_layer(s_power_layer), s_power_frame);
+      text_layer_set_text_alignment(s_power_layer, s_power_align);
+      text_layer_set_background_color(s_power_layer, GColorClear);
+      text_layer_set_text_color(s_power_layer, GColorWhite);
+    }
+#else
+    if (ink_changed) {
       GColor c = PAL_GOLD;
       if (ink == STATUS_RED) c = PAL_RED;
       else if (ink == STATUS_ACCENT) c = PAL_ACCENT;
       text_layer_set_text_color(s_power_layer, c);
     }
+#endif
   }
 }
 
@@ -267,6 +309,8 @@ static void apply_layout(bool peek) {
   if (s_power_layer) {
     layer_set_frame(text_layer_get_layer(s_power_layer), frames->power);
     text_layer_set_text_alignment(s_power_layer, frames->power_align);
+    s_power_frame = frames->power;
+    s_power_align = frames->power_align;
   }
   if (s_weather_layer) {
     layer_set_frame(text_layer_get_layer(s_weather_layer), frames->weather);
@@ -294,6 +338,7 @@ static void unobstructed_did_change(void *context) {
   (void)context;
   Layer *root = window_get_root_layer(s_window);
   apply_layout(layer_get_unobstructed_bounds(root).size.h < layer_get_bounds(root).size.h);
+  update_power();  /* re-fit the black-and-white low-battery box to the new frame */
   meter_refresh();
 }
 

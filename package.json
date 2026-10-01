@@ -23,7 +23,8 @@
       "emery",
       "gabbro",
       "basalt",
-      "chalk"
+      "chalk",
+      "flint"
     ],
     "watchapp": {
       "watchface": true
@@ -69,7 +70,8 @@
           "targetPlatforms": [
             "emery",
             "gabbro",
-            "basalt"
+            "basalt",
+            "flint"
           ]
         },
         {
@@ -87,7 +89,8 @@
           "file": "fonts/ZenDots-Regular.ttf",
           "characterRegex": "[0-9]",
           "targetPlatforms": [
-            "basalt"
+            "basalt",
+            "flint"
           ]
         },
         {
@@ -107,7 +110,8 @@
           "characterRegex": "[a-z0-9 .°%+~-]",
           "targetPlatforms": [
             "basalt",
-            "chalk"
+            "chalk",
+            "flint"
           ]
         }
       ]

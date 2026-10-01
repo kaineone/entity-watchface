@@ -54,6 +54,7 @@ module.exports = [
         label: "Hour colour",
         defaultValue: "0",
         serializeValueAs: "integer",
+        capabilities: ["COLOR"],
         options: [
           { label: "Red", value: "0" },
           { label: "Cream", value: "1" },
