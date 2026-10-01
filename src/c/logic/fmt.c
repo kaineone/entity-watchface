@@ -1,6 +1,7 @@
 #include "fmt.h"
 
 #include <stdio.h>
+#include <string.h>
 
 void fmt_hour(char *buf, size_t n, int hour24, bool use24h) {
   if (use24h) {
@@ -44,4 +45,26 @@ void fmt_bpm(char *buf, size_t n, long bpm) {
   } else {
     snprintf(buf, n, "%ld bpm", bpm);
   }
+}
+
+void fmt_date_locale(char *buf, size_t n, int wday, int mday, int mon0, bool month_first) {
+  static const char * const days[] = {
+    "sun", "mon", "tue", "wed", "thu", "fri", "sat"
+  };
+  static const char * const months[] = {
+    "jan", "feb", "mar", "apr", "may", "jun",
+    "jul", "aug", "sep", "oct", "nov", "dec"
+  };
+  const int day_idx = (wday >= 0 && wday <= 6) ? wday : 0;
+  const int mon_idx = (mon0 >= 0 && mon0 <= 11) ? mon0 : 0;
+
+  if (month_first) {
+    snprintf(buf, n, "%s %s %d", days[day_idx], months[mon_idx], mday);
+  } else {
+    snprintf(buf, n, "%s %d %s", days[day_idx], mday, months[mon_idx]);
+  }
+}
+
+bool fmt_locale_month_first(const char *locale) {
+  return locale != NULL && strncmp(locale, "en_US", 5) == 0;
 }

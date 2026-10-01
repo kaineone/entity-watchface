@@ -54,7 +54,7 @@ static char s_hour_buf[FMT_HOUR_LEN];
 static char s_minute_buf[FMT_MINUTE_LEN];
 static char s_ampm_buf[3];
 static char s_power_buf[STATUS_POWER_LEN];
-static char s_weather_buf[WEATHER_TEXT_LEN > FMT_BPM_LEN ? WEATHER_TEXT_LEN : FMT_BPM_LEN];
+static char s_weather_buf[FMT_BPM_LEN];
 
 static GColor s_hour_color = PAL_HOUR_RED;
 static int8_t s_hour12_pref = -1;
@@ -114,44 +114,12 @@ static void update_weather(void) {
   if (!s_show_weather) return;
 
   bool stale = false;
-  char text[WEATHER_TEXT_LEN];
+  char text[WEATHER_TEMP_TEXT_LEN];
   if (s_wx_time == 0) {
     text[0] = '\0';
   } else {
     stale = weather_is_stale((int32_t)time(NULL), s_wx_time, WEATHER_STALE_SECS);
-
-    int date_w = s_date_layer ? text_layer_get_content_size(s_date_layer).w : 0;
-    GRect date_frame = s_date_layer ? layer_get_frame(text_layer_get_layer(s_date_layer)) : GRectZero;
-    GRect weather_frame = layer_get_frame(text_layer_get_layer(s_weather_layer));
-    int max_w = weather_frame.origin.x + weather_frame.size.w - (date_frame.origin.x + date_w + 4);
-
-    if (date_frame.origin.y == weather_frame.origin.y) {
-#if defined(PBL_BW)
-      const int levels[3] = {0, 2, 3};
-      for (int idx = 0; idx < 3; idx++) {
-        int level = levels[idx];
-        weather_text_variant(text, sizeof(text), s_wx_cond, s_wx_temp_c10, s_fahrenheit, stale, level);
-        if ((level == 2 || level == 3) && stale) {
-          memmove(text + 1, text, strlen(text) + 1);
-          text[0] = '~';
-        }
-        GSize size = graphics_text_layout_get_content_size(text, s_font_label, GRect(0, 0, 200, weather_frame.size.h),
-                                                           GTextOverflowModeTrailingEllipsis,
-                                                           GTextAlignmentRight);
-        if (size.w <= max_w) break;
-      }
-#else
-      for (int level = 0; level <= 3; level++) {
-        weather_text_variant(text, sizeof(text), s_wx_cond, s_wx_temp_c10, s_fahrenheit, stale, level);
-        GSize size = graphics_text_layout_get_content_size(text, s_font_label, GRect(0, 0, 200, weather_frame.size.h),
-                                                           GTextOverflowModeTrailingEllipsis,
-                                                           GTextAlignmentRight);
-        if (size.w <= max_w) break;
-      }
-#endif
-    } else {
-      weather_text_variant(text, sizeof(text), s_wx_cond, s_wx_temp_c10, s_fahrenheit, stale, 0);
-    }
+    weather_temp_text(text, sizeof(text), s_wx_temp_c10, s_fahrenheit, stale);
   }
 
   if (strcmp(s_weather_buf, text) != 0) {
@@ -264,8 +232,9 @@ static void update_time(struct tm *tick_time) {
   if (!s_swapped) {
     int daykey = tick_time->tm_year * 400 + tick_time->tm_yday;
     if (daykey != s_last_daykey) {
-      char dt[FMT_DATE_LEN];
-      fmt_date(dt, sizeof(dt), tick_time->tm_wday, tick_time->tm_mday, tick_time->tm_mon);
+      char dt[FMT_DATE_LOCALE_LEN];
+      fmt_date_locale(dt, sizeof(dt), tick_time->tm_wday, tick_time->tm_mday, tick_time->tm_mon,
+                      fmt_locale_month_first(i18n_get_system_locale()));
       if (strcmp(s_date_buf, dt) != 0) {
         strcpy(s_date_buf, dt);
         if (s_date_layer) text_layer_set_text(s_date_layer, s_date_buf);
