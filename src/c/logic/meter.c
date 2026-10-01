@@ -109,9 +109,9 @@ bool meter_bayer_cool(int x, int y) {
   return matrix[yi * 4 + xi] < 8;
 }
 
-MeterMode meter_mode(bool linked, bool animate_pref, int battery_pct, int threshold, bool quiet, bool peek) {
+MeterMode meter_mode(bool linked, bool animate_pref, int battery_pct, int threshold, bool charging, bool quiet, bool peek) {
   if (!linked) return MODE_UNLINKED;
-  if (battery_pct <= threshold || quiet || !animate_pref || peek) return MODE_FROZEN;
+  if ((battery_pct <= threshold && !charging) || quiet || !animate_pref || peek) return MODE_FROZEN;
   return MODE_ANIMATING;
 }
 

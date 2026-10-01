@@ -49,7 +49,7 @@ MeterInk meter_heat(int d);
 BarStyle meter_bar(const Meter *m, MeterMode mode, int i);
 MeterInk meter_baseline_ink(MeterMode mode);
 bool meter_bayer_cool(int x, int y);
-MeterMode meter_mode(bool linked, bool animate_pref, int battery_pct, int threshold, bool quiet, bool peek);
+MeterMode meter_mode(bool linked, bool animate_pref, int battery_pct, int threshold, bool charging, bool quiet, bool peek);
 bool meter_timer_should_run(MeterMode mode, bool focused);
 
 #endif

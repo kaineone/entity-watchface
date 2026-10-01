@@ -1,12 +1,12 @@
 #include <pebble.h>
+#include <stdint.h>
 #include "logic/fmt.h"
 #include "logic/status.h"
 #include "layout.h"
 #include "palette.h"
 #include "meter_layer.h"
 #include "status_layer.h"
-
-#include <stdint.h>
+#include "settings_store.h"
 
 static Window *s_window;
 static TextLayer *s_date_layer;
@@ -207,7 +207,7 @@ static void meter_timer_cb(void *data) {
 
 static void meter_refresh(void) {
   MeterMode mode = meter_mode(s_linked, s_animate_pref, s_battery_pct,
-                              s_battery_threshold, s_quiet, s_peek);
+                              s_battery_threshold, s_charging, s_quiet, s_peek);
   meter_layer_set_mode(mode);
   s_meter_mode = mode;
 
@@ -218,6 +218,33 @@ static void meter_refresh(void) {
     app_timer_cancel(s_meter_timer);
     s_meter_timer = NULL;
   }
+}
+
+static void apply_settings(const Settings *s, bool redraw) {
+  s_hour12_pref = s->clock;
+
+  switch (s->hour_color) {
+    case HOUR_CREAM: s_hour_color = PAL_CREAM; break;
+    case HOUR_GOLD: s_hour_color = PAL_ACCENT; break;
+    default: s_hour_color = PAL_HOUR_RED; break;
+  }
+
+  s_animate_pref = s->animate;
+  s_vibe_pref = s->vibe_disconnect;
+  s_battery_threshold = s->low_battery;
+
+  if (redraw) {
+    if (s_hour_layer) text_layer_set_text_color(s_hour_layer, s_hour_color);
+    s_hour_buf[0] = '\0';
+    time_t now = time(NULL);
+    update_time(localtime(&now));
+    update_power();
+    meter_refresh();
+  }
+}
+
+static void on_settings_changed(const Settings *s) {
+  apply_settings(s, true);
 }
 
 static void window_load(Window *window) {
@@ -357,12 +384,17 @@ static void init(void) {
     .load = window_load,
     .unload = window_unload
   });
+
+  settings_store_init(on_settings_changed);
+  apply_settings(settings_store_get(), false);
+
   window_stack_push(s_window, true);
 }
 
 static void deinit(void) {
   tick_timer_service_unsubscribe();
   unobstructed_area_service_unsubscribe();
+  app_message_deregister_callbacks();
   if (s_window) {
     window_destroy(s_window);
     s_window = NULL;
