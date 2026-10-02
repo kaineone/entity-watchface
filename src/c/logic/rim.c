@@ -1,3 +1,4 @@
+#include <stdbool.h>
 #include "rim.h"
 
 static uint32_t xorshift(uint32_t x) {
@@ -70,6 +71,69 @@ TickStyle rim_tick(const RimMeter *rm, MeterMode mode, int minute, int second, i
   int k = second < RIM_TRAIL_MAX ? second : RIM_TRAIL_MAX;
   for (int d = 1; d <= k; d++) {
     int t = (minute % 2 == 0) ? mod_tick(c - d) : mod_tick(c + d);
+    if (t == i) {
+      int len = rm->rest[i] + rim_boost(d);
+      s.len = len < RIM_MAX_LEN ? (uint8_t)len : RIM_MAX_LEN;
+      s.ink = meter_heat(d);
+      return s;
+    }
+  }
+
+  s.len = rm->rest[i];
+  s.ink = INK_GOLD;
+  return s;
+}
+
+TickStyle rim_tick_frac(const RimMeter *rm, MeterMode mode, bool bursting, int minute,
+                        int second, int ms, int i) {
+  TickStyle s;
+  if (mode == MODE_UNLINKED) {
+    s.len = RIM_FLAT_LEN;
+    s.ink = INK_DISABLED;
+    return s;
+  }
+  if (mode == MODE_FROZEN) {
+    s.len = RIM_FLAT_LEN;
+    s.ink = INK_GOLD;
+    return s;
+  }
+  if (!bursting) {
+    s.len = rm->rest[i];
+    s.ink = INK_GOLD;
+    return s;
+  }
+
+  bool even = (minute % 2 == 0);
+  int f = even ? (second * 1000 + ms) : ((60000 - (second * 1000 + ms)) % 60000);
+  int c0, c1, frac;
+
+  if (even) {
+    c0 = f / 1000;
+    c1 = mod_tick(c0 + 1);
+    frac = f % 1000;
+  } else {
+    c0 = ((f + 999) / 1000) % RIM_TICKS;
+    c1 = mod_tick(c0 - 1);
+    frac = (1000 - (f % 1000)) % 1000;
+  }
+
+  if (i == c0) {
+    int len = RIM_MAX_LEN * (1000 - frac) / 1000;
+    s.len = len < rm->rest[i] ? rm->rest[i] : (uint8_t)len;
+    s.ink = INK_RED;
+    return s;
+  }
+
+  if (i == c1 && frac > 0) {
+    int len = RIM_MAX_LEN * frac / 1000;
+    s.len = len < rm->rest[i] ? rm->rest[i] : (uint8_t)len;
+    s.ink = (frac >= 500) ? INK_RED : INK_HEAT1;
+    return s;
+  }
+
+  int k = second < RIM_TRAIL_MAX ? second : RIM_TRAIL_MAX;
+  for (int d = 1; d <= k; d++) {
+    int t = even ? mod_tick(c0 - d) : mod_tick(c0 + d);
     if (t == i) {
       int len = rm->rest[i] + rim_boost(d);
       s.len = len < RIM_MAX_LEN ? (uint8_t)len : RIM_MAX_LEN;

@@ -25,11 +25,11 @@ jobs:
       - uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
         with:
           path: ~/.local/share/pebble-sdk
-          key: pebble-sdk-4.33.1-${{ runner.os }}
+          key: pebble-sdk-4.33.1-py3.13.13-${{ runner.os }}
 
       - name: Install pebble tool
         run: |
-          uv tool install pebble-tool==5.0.40 --python 3.13
+          uv tool install pebble-tool==5.0.40 --python 3.13.13
           echo "$HOME/.local/bin" >> "$GITHUB_PATH"
 
       - name: Install/activate Pebble SDK

@@ -2,11 +2,13 @@
 #include "layout.h"
 #include "meter_layer.h"
 #include "logic/meter.h"
+#include "logic/glide.h"
 #include "palette.h"
 
 static Layer *s_layer;
-static Meter s_meter;
+static Glide s_glide;
 static MeterMode s_mode;
+static bool s_bursting = false;
 
 static uint8_t s_pitch = 9;
 static uint8_t s_bar_w = 7;
@@ -29,12 +31,13 @@ static GColor color_for_ink(MeterInk ink) {
 #endif
 
 static void update_proc(Layer *layer, GContext *ctx) {
+  (void)layer;
   graphics_context_set_antialiased(ctx, false);
 
-  const GRect f = layer_get_frame(layer);
+  const GRect f = layer_get_frame(s_layer);
 
   for (int i = 0; i < METER_BARS; i++) {
-    const BarStyle s = meter_bar(&s_meter, s_mode, i);
+    const BarStyle s = glide_bar(&s_glide, s_mode, s_bursting, i);
 
     int h = s.height;
     if (s_max_h != METER_MAX_H) {
@@ -118,8 +121,9 @@ Layer *meter_layer_create(GRect frame) {
   if (!s_layer) return NULL;
 
   layer_set_update_proc(s_layer, update_proc);
-  meter_init(&s_meter, (uint32_t)time(NULL));
+  glide_init(&s_glide, (uint32_t)time(NULL));
   s_mode = MODE_FROZEN;
+  s_bursting = false;
 
   return s_layer;
 }
@@ -138,7 +142,14 @@ void meter_layer_set_mode(MeterMode mode) {
   }
 }
 
-void meter_layer_step(void) {
-  meter_step(&s_meter);
+void meter_layer_set_bursting(bool bursting) {
+  if (bursting != s_bursting) {
+    s_bursting = bursting;
+    if (s_layer) layer_mark_dirty(s_layer);
+  }
+}
+
+void meter_layer_frame(int frames_left, int frames_total) {
+  glide_frame(&s_glide, frames_left, frames_total);
   if (s_layer) layer_mark_dirty(s_layer);
 }

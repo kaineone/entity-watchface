@@ -7,6 +7,7 @@
 Layer *meter_layer_create(GRect frame);
 void meter_layer_destroy(void);
 void meter_layer_set_mode(MeterMode mode);
-void meter_layer_step(void);
+void meter_layer_set_bursting(bool bursting);
+void meter_layer_frame(int frames_left, int frames_total);
 
 #endif

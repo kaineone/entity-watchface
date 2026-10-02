@@ -10,15 +10,22 @@
 #include "status_layer.h"
 #include "settings_store.h"
 
+static int s_burst_left = 0;
+static int s_burst_total = 0;
+
 #if defined(PBL_ROUND)
 #include "rim_layer.h"
 static Layer *meter_view_create(GRect frame) { return rim_layer_create(frame); }
 static void meter_view_destroy(void) { rim_layer_destroy(); }
 static void meter_view_set_mode(MeterMode mode) { rim_layer_set_mode(mode); }
+static void meter_view_set_bursting(bool bursting) { rim_layer_set_bursting(bursting); }
+static void meter_view_frame(void) { rim_layer_frame(); }
 #else
 static Layer *meter_view_create(GRect frame) { return meter_layer_create(frame); }
 static void meter_view_destroy(void) { meter_layer_destroy(); }
 static void meter_view_set_mode(MeterMode mode) { meter_layer_set_mode(mode); }
+static void meter_view_set_bursting(bool bursting) { meter_layer_set_bursting(bursting); }
+static void meter_view_frame(void) { meter_layer_frame(s_burst_left, s_burst_total); }
 #endif
 
 #define WX_PERSIST_KEY 2
@@ -29,6 +36,11 @@ typedef struct __attribute__((__packed__)) {
   int16_t temp_c10;
   int32_t time;
 } WxPersist;
+
+#define BURST_FRAME_MS PBL_IF_ROUND_ELSE(200, 100)
+#define BURST_LONG (25000 / BURST_FRAME_MS)
+#define BURST_SHORT (4000 / BURST_FRAME_MS)
+#define DOUBLE_TAP_MS 700
 
 static Window *s_window;
 static TextLayer *s_date_layer;
@@ -85,12 +97,9 @@ static int s_wx_cond = 0;
 static int s_wx_temp_c10 = 0;
 static int32_t s_wx_time = 0;
 
-static AppTimer *s_meter_timer = NULL;
+static AppTimer *s_burst_timer = NULL;
+static int64_t s_last_tap_ms = 0;
 static MeterMode s_meter_mode = MODE_FROZEN;
-
-#if defined(PBL_ROUND)
-static TimeUnits s_tick_units = MINUTE_UNIT;
-#endif
 
 static bool s_tap_pref = true;
 static bool s_swapped = false;
@@ -98,6 +107,7 @@ static AppTimer *s_swap_timer = NULL;
 static bool s_tap_subscribed = false;
 
 static void meter_refresh(void);
+static void start_burst(int frames);
 static void update_tap_subscription(void);
 static void swap_out(void);
 static void handle_tap(AccelAxisType axis, int32_t direction);
@@ -251,12 +261,8 @@ static void tick_handler(struct tm *tick_time, TimeUnits units_changed) {
     update_time(tick_time);
     meter_refresh();
     update_weather();
+    start_burst(BURST_SHORT);
   }
-#if defined(PBL_ROUND)
-  if (s_tick_units == SECOND_UNIT) {
-    rim_layer_set_time(tick_time->tm_min, tick_time->tm_sec);
-  }
-#endif
 }
 
 static void apply_layout(bool peek) {
@@ -354,16 +360,43 @@ static void handle_focus(bool in_focus) {
   meter_refresh();
 }
 
-#if !defined(PBL_ROUND)
-static void meter_timer_cb(void *data) {
+static void stop_burst(void) {
+  if (s_burst_timer) {
+    app_timer_cancel(s_burst_timer);
+    s_burst_timer = NULL;
+  }
+  s_burst_left = 0;
+  meter_view_set_bursting(false);
+}
+
+static void burst_cb(void *data) {
   (void)data;
-  s_meter_timer = NULL;
-  meter_layer_step();
-  if (meter_timer_should_run(s_meter_mode, s_focused)) {
-    s_meter_timer = app_timer_register(250, meter_timer_cb, NULL);
+  s_burst_timer = NULL;
+  meter_view_frame();
+  s_burst_left--;
+  if (s_burst_left <= 0) {
+    stop_burst();
+  } else {
+    s_burst_timer = app_timer_register((uint32_t)BURST_FRAME_MS, burst_cb, NULL);
   }
 }
-#endif
+
+static void start_burst(int frames) {
+  if (s_meter_mode != MODE_ANIMATING || !s_focused) return;
+
+  if (s_burst_left > 0) {
+    if (frames > s_burst_left) {
+      s_burst_total += frames - s_burst_left;
+      s_burst_left = frames;
+    }
+    return;
+  }
+
+  s_burst_left = frames;
+  s_burst_total = frames;
+  meter_view_set_bursting(true);
+  s_burst_timer = app_timer_register((uint32_t)BURST_FRAME_MS, burst_cb, NULL);
+}
 
 static void meter_refresh(void) {
   s_quiet = quiet_time_is_active();
@@ -374,26 +407,9 @@ static void meter_refresh(void) {
   s_meter_mode = mode;
   meter_view_set_mode(mode);
 
-#if defined(PBL_ROUND)
-  TimeUnits want = meter_timer_should_run(mode, s_focused) ? SECOND_UNIT : MINUTE_UNIT;
-  if (want != s_tick_units) {
-    s_tick_units = want;
-    tick_timer_service_subscribe(want, tick_handler);
-    if (want == SECOND_UNIT) {
-      time_t now = time(NULL);
-      struct tm *t = localtime(&now);
-      rim_layer_set_time(t->tm_min, t->tm_sec);
-    }
+  if (mode != MODE_ANIMATING || !s_focused) {
+    stop_burst();
   }
-#else
-  bool run = meter_timer_should_run(mode, s_focused);
-  if (run && !s_meter_timer) {
-    s_meter_timer = app_timer_register(250, meter_timer_cb, NULL);
-  } else if (!run && s_meter_timer) {
-    app_timer_cancel(s_meter_timer);
-    s_meter_timer = NULL;
-  }
-#endif
 }
 
 static long read_steps(void) {
@@ -474,15 +490,27 @@ static void handle_tap(AccelAxisType axis, int32_t direction) {
   (void)axis;
   (void)direction;
   if (!s_focused) return;
-  if (!s_tap_pref) return;
-  if (s_swapped) swap_out(); else swap_in();
+
+  time_t t;
+  uint16_t ms;
+  time_ms(&t, &ms);
+  int64_t now_ms = (int64_t)t * 1000 + ms;
+
+  if (s_tap_pref && s_last_tap_ms != 0 && now_ms - s_last_tap_ms <= DOUBLE_TAP_MS) {
+    s_last_tap_ms = 0;
+    if (s_swapped) swap_out(); else swap_in();
+  } else {
+    s_last_tap_ms = now_ms;
+  }
+
+  start_burst(BURST_LONG);
 }
 
 static void update_tap_subscription(void) {
-  if (s_tap_pref && !s_tap_subscribed) {
+  if ((s_tap_pref || s_animate_pref) && !s_tap_subscribed) {
     accel_tap_service_subscribe(handle_tap);
     s_tap_subscribed = true;
-  } else if (!s_tap_pref && s_tap_subscribed) {
+  } else if (!(s_tap_pref || s_animate_pref) && s_tap_subscribed) {
     accel_tap_service_unsubscribe();
     s_tap_subscribed = false;
     if (s_swapped) swap_out();
@@ -613,9 +641,6 @@ static void window_load(Window *window) {
   update_weather();
 
   tick_timer_service_subscribe(MINUTE_UNIT, tick_handler);
-#if defined(PBL_ROUND)
-  s_tick_units = MINUTE_UNIT;
-#endif
 
   unobstructed_area_service_subscribe((UnobstructedAreaHandlers) {
     .did_change = unobstructed_did_change
@@ -631,6 +656,7 @@ static void window_load(Window *window) {
 
   update_tap_subscription();
   meter_refresh();
+  start_burst(BURST_SHORT);
 }
 
 static void window_unload(Window *window) {
@@ -646,9 +672,9 @@ static void window_unload(Window *window) {
   }
   s_swapped = false;
 
-  if (s_meter_timer) {
-    app_timer_cancel(s_meter_timer);
-    s_meter_timer = NULL;
+  if (s_burst_timer) {
+    app_timer_cancel(s_burst_timer);
+    s_burst_timer = NULL;
   }
 
   connection_service_unsubscribe();

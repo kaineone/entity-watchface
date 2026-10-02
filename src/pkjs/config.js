@@ -113,7 +113,7 @@ module.exports = [
       {
         type: "toggle",
         messageKey: "TapSwap",
-        label: "Tap to show steps and heart rate",
+        label: "Double tap to show steps and heart rate",
         defaultValue: true
       }
     ]
