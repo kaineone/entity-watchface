@@ -25,7 +25,5 @@ int rim_cursor(int minute, int second);
 void rim_land(RimMeter *rm, int tick);
 int rim_boost(int d);
 TickStyle rim_tick(const RimMeter *rm, MeterMode mode, int minute, int second, int i);
-TickStyle rim_tick_frac(const RimMeter *rm, MeterMode mode, bool bursting, int minute,
-                        int second, int ms, int i);
 
 #endif
