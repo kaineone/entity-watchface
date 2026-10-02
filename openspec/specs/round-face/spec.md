@@ -62,3 +62,10 @@ ticks rest in gold.
 #### Scenario: Between seconds
 - **WHEN** the time is 10:02:15.5 during a burst
 - **THEN** ticks 15 and 16 both show part of the cursor length
+
+### Requirement: Smooth rim ticks
+On colour round watches the rim ticks SHALL be drawn with stroke anti-aliasing enabled.
+
+#### Scenario: Diagonal tick
+- **WHEN** a tick is drawn at 1:30 on the Round 2
+- **THEN** its edges are smoothed with intermediate colours

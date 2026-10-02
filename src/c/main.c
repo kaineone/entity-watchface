@@ -7,6 +7,7 @@
 #include "layout.h"
 #include "palette.h"
 #include "meter_layer.h"
+#include "numeral_layer.h"
 #include "status_layer.h"
 #include "settings_store.h"
 
@@ -44,22 +45,16 @@ typedef struct __attribute__((__packed__)) {
 
 static Window *s_window;
 static TextLayer *s_date_layer;
-static TextLayer *s_hour_layer;
+static Layer *s_hour_num;
 static TextLayer *s_ampm_layer;
-static TextLayer *s_minute_layer;
+static Layer *s_minute_num;
 static TextLayer *s_power_layer;
 static TextLayer *s_weather_layer;
 static Layer *s_meter_layer;
 static Layer *s_link_layer;
 static Layer *s_quiet_layer;
 
-static GFont s_font_large;
-static GFont s_font_small;
 static GFont s_font_label;
-
-static bool s_font_large_custom = false;
-static bool s_font_small_custom = false;
-static bool s_font_label_custom = false;
 
 static char s_date_buf[FMT_STEPS_LEN];
 static char s_hour_buf[FMT_HOUR_LEN];
@@ -218,13 +213,13 @@ static void update_time(struct tm *tick_time) {
   fmt_hour(temp, sizeof(temp), hour24, use24);
   if (strcmp(s_hour_buf, temp) != 0) {
     strcpy(s_hour_buf, temp);
-    if (s_hour_layer) text_layer_set_text(s_hour_layer, s_hour_buf);
+    if (s_hour_num) numeral_layer_set_text(s_hour_num, s_hour_buf);
   }
 
   fmt_minute(temp, sizeof(temp), tick_time->tm_min);
   if (strcmp(s_minute_buf, temp) != 0) {
     strcpy(s_minute_buf, temp);
-    if (s_minute_layer) text_layer_set_text(s_minute_layer, s_minute_buf);
+    if (s_minute_num) numeral_layer_set_text(s_minute_num, s_minute_buf);
   }
 
   if (s_ampm_layer) {
@@ -276,17 +271,17 @@ static void apply_layout(bool peek) {
     layer_set_frame(text_layer_get_layer(s_date_layer), frames->date);
     text_layer_set_text_alignment(s_date_layer, frames->date_align);
   }
-  if (s_hour_layer) {
-    layer_set_frame(text_layer_get_layer(s_hour_layer), frames->hour);
-    text_layer_set_text_alignment(s_hour_layer, frames->hour_align);
+  if (s_hour_num) {
+    layer_set_frame(s_hour_num, frames->hour);
+    numeral_layer_set_metrics(s_hour_num, frames->num_gap, frames->num_stroke);
   }
   if (s_ampm_layer) {
     layer_set_frame(text_layer_get_layer(s_ampm_layer), frames->ampm);
     text_layer_set_text_alignment(s_ampm_layer, frames->ampm_align);
   }
-  if (s_minute_layer) {
-    layer_set_frame(text_layer_get_layer(s_minute_layer), frames->minute);
-    text_layer_set_text_alignment(s_minute_layer, frames->minute_align);
+  if (s_minute_num) {
+    layer_set_frame(s_minute_num, frames->minute);
+    numeral_layer_set_metrics(s_minute_num, frames->num_gap, frames->num_stroke);
   }
   if (s_power_layer) {
     layer_set_frame(text_layer_get_layer(s_power_layer), frames->power);
@@ -298,15 +293,11 @@ static void apply_layout(bool peek) {
     layer_set_frame(text_layer_get_layer(s_weather_layer), frames->weather);
     text_layer_set_text_alignment(s_weather_layer, frames->weather_align);
   }
-  if (s_link_layer) layer_set_frame(s_link_layer, frames->link);
+  if (s_link_layer) {
+    layer_set_frame(s_link_layer, frames->link);
+    layer_set_hidden(s_link_layer, !layout_get()->show_link);
+  }
   if (s_quiet_layer) layer_set_frame(s_quiet_layer, frames->quiet);
-
-  if (s_hour_layer) {
-    text_layer_set_font(s_hour_layer, frames->digits == DIGITS_LARGE ? s_font_large : s_font_small);
-  }
-  if (s_minute_layer) {
-    text_layer_set_font(s_minute_layer, frames->digits == DIGITS_LARGE ? s_font_large : s_font_small);
-  }
 
   if (s_meter_layer) {
     layer_set_frame(s_meter_layer, frames->meter);
@@ -320,7 +311,7 @@ static void unobstructed_did_change(void *context) {
   (void)context;
   Layer *root = window_get_root_layer(s_window);
   apply_layout(layer_get_unobstructed_bounds(root).size.h < layer_get_bounds(root).size.h);
-  update_power();  /* re-fit the black-and-white low-battery box to the new frame */
+  update_power();
   meter_refresh();
 }
 
@@ -403,7 +394,7 @@ static void meter_refresh(void) {
   quiet_layer_set_visible(s_quiet);
 
   MeterMode mode = meter_mode(s_linked, s_animate_pref, s_battery_pct,
-                              s_battery_threshold, s_charging, s_quiet, s_peek);
+                                s_battery_threshold, s_charging, s_quiet, s_peek);
   s_meter_mode = mode;
   meter_view_set_mode(mode);
 
@@ -425,7 +416,7 @@ static long read_steps(void) {
 #if !defined(PBL_ROUND)
 static long read_bpm(void) {
   time_t end = time(NULL);
-  time_t start = end;  /* the HR guide checks (now, now) before peeking the current value */
+  time_t start = end;
   if (health_service_metric_accessible(HealthMetricHeartRateBPM, start, end) &
       HealthServiceAccessibilityMaskAvailable) {
     return (long)health_service_peek_current_value(HealthMetricHeartRateBPM);
@@ -452,7 +443,6 @@ static void swap_in(void) {
   }
 
 #if !defined(PBL_ROUND)
-  /* Round Pebbles have no heart-rate sensor: keep the weather on the bottom row. */
   char wx_tmp[FMT_BPM_LEN];
   long bpm = read_bpm();
   fmt_bpm(wx_tmp, sizeof(wx_tmp), bpm);
@@ -536,7 +526,7 @@ static void apply_settings(const Settings *s, bool redraw) {
   s_tap_pref = s->tap_swap;
 
   if (redraw) {
-    if (s_hour_layer) text_layer_set_text_color(s_hour_layer, s_hour_color);
+    if (s_hour_num) numeral_layer_set_color(s_hour_num, s_hour_color);
     s_hour_buf[0] = '\0';
     time_t now = time(NULL);
     update_time(localtime(&now));
@@ -559,64 +549,31 @@ static void on_settings_changed(const Settings *s) {
 static void window_load(Window *window) {
   (void)window;
 
-  const FaceLayout *layout = layout_get();
-  ResHandle large_handle = resource_get_handle(layout->font_large_res);
-  ResHandle small_handle = resource_get_handle(layout->font_small_res);
-
-  if (layout->font_large_res == layout->font_small_res) {
-    s_font_large = fonts_load_custom_font(large_handle);
-    s_font_small = s_font_large;
-    s_font_large_custom = (s_font_large != NULL);
-    s_font_small_custom = false;
-  } else {
-    s_font_large = fonts_load_custom_font(large_handle);
-    s_font_small = fonts_load_custom_font(small_handle);
-    s_font_large_custom = (s_font_large != NULL);
-    s_font_small_custom = (s_font_small != NULL);
-  }
-
-  s_font_label = fonts_load_custom_font(resource_get_handle(layout->label_font_res));
-  s_font_label_custom = (s_font_label != NULL);
-
-  if (!s_font_large || !s_font_small || !s_font_label) {
-    APP_LOG(APP_LOG_LEVEL_ERROR, "font load failed");
-  }
-  if (!s_font_large) {
-    s_font_large = fonts_get_system_font(FONT_KEY_GOTHIC_24_BOLD);
-    s_font_large_custom = false;
-  }
-  if (!s_font_small) {
-    s_font_small = fonts_get_system_font(FONT_KEY_GOTHIC_24_BOLD);
-    s_font_small_custom = false;
-  }
-  if (!s_font_label) {
-    s_font_label = fonts_get_system_font(FONT_KEY_GOTHIC_14);
-    s_font_label_custom = false;
-  }
+  s_font_label = fonts_get_system_font(FONT_KEY_GOTHIC_14_BOLD);
 
   Layer *root = window_get_root_layer(s_window);
   const FaceFrames *frames = &layout_get()->normal;
 
   s_date_layer = make_layer(frames->date, GTextAlignmentLeft, s_font_label, PAL_GOLD);
-  s_hour_layer = make_layer(frames->hour, GTextAlignmentLeft, s_font_large, s_hour_color);
-  s_ampm_layer = make_layer(frames->ampm, GTextAlignmentRight, s_font_label, PAL_GOLD);
-  s_minute_layer = make_layer(frames->minute, GTextAlignmentRight, s_font_large, PAL_GOLD);
+  s_hour_num = numeral_layer_create(frames->hour, s_hour_color, frames->num_gap, frames->num_stroke);
+  s_ampm_layer = make_layer(frames->ampm, GTextAlignmentCenter, s_font_label, PAL_GOLD);
+  s_minute_num = numeral_layer_create(frames->minute, PAL_GOLD, frames->num_gap, frames->num_stroke);
   s_meter_layer = meter_view_create(frames->meter);
   s_power_layer = make_layer(frames->power, GTextAlignmentRight, s_font_label, PAL_GOLD);
   s_weather_layer = make_layer(frames->weather, GTextAlignmentRight, s_font_label, PAL_ACCENT);
   s_link_layer = link_layer_create(frames->link);
   s_quiet_layer = quiet_layer_create(frames->quiet);
 
-  if (!s_date_layer || !s_hour_layer || !s_ampm_layer || !s_minute_layer ||
+  if (!s_date_layer || !s_hour_num || !s_ampm_layer || !s_minute_num ||
       !s_meter_layer || !s_power_layer || !s_weather_layer || !s_link_layer || !s_quiet_layer) {
     APP_LOG(APP_LOG_LEVEL_ERROR, "layer create failed");
     return;
   }
 
   layer_add_child(root, text_layer_get_layer(s_date_layer));
-  layer_add_child(root, text_layer_get_layer(s_hour_layer));
+  layer_add_child(root, s_hour_num);
   layer_add_child(root, text_layer_get_layer(s_ampm_layer));
-  layer_add_child(root, text_layer_get_layer(s_minute_layer));
+  layer_add_child(root, s_minute_num);
   layer_add_child(root, s_meter_layer);
   layer_add_child(root, text_layer_get_layer(s_power_layer));
   layer_add_child(root, text_layer_get_layer(s_weather_layer));
@@ -701,34 +658,20 @@ static void window_unload(Window *window) {
     text_layer_destroy(s_date_layer);
     s_date_layer = NULL;
   }
-  if (s_hour_layer) {
-    text_layer_destroy(s_hour_layer);
-    s_hour_layer = NULL;
+  if (s_hour_num) {
+    numeral_layer_destroy(s_hour_num);
+    s_hour_num = NULL;
   }
   if (s_ampm_layer) {
     text_layer_destroy(s_ampm_layer);
     s_ampm_layer = NULL;
   }
-  if (s_minute_layer) {
-    text_layer_destroy(s_minute_layer);
-    s_minute_layer = NULL;
+  if (s_minute_num) {
+    numeral_layer_destroy(s_minute_num);
+    s_minute_num = NULL;
   }
 
-  if (s_font_large && s_font_large_custom) {
-    fonts_unload_custom_font(s_font_large);
-  }
-  if (s_font_small && s_font_small_custom && s_font_small != s_font_large) {
-    fonts_unload_custom_font(s_font_small);
-  }
-  if (s_font_label && s_font_label_custom) {
-    fonts_unload_custom_font(s_font_label);
-  }
-  s_font_large = NULL;
-  s_font_small = NULL;
   s_font_label = NULL;
-  s_font_large_custom = false;
-  s_font_small_custom = false;
-  s_font_label_custom = false;
 }
 
 static void load_weather_persist(void) {
