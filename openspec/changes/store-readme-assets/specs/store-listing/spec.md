@@ -29,3 +29,11 @@ each demonstration introduced by a slide, with alt text that describes what happ
 #### Scenario: Reading the README
 - **WHEN** someone opens the repository page
 - **THEN** they see the hero image, both animated demos and the lineup of every supported watch
+
+### Requirement: Free and forkable
+The repository SHALL carry the GPL-3.0-or-later licence. The listing SHALL say the face is free,
+with no premium version and no paywall, and that forks are welcome, and SHALL link the source.
+
+#### Scenario: Reading the listing
+- **WHEN** someone reads the store description
+- **THEN** it says the face is free with no paywall and points to the GitHub repository for forks

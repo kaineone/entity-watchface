@@ -67,3 +67,9 @@ pebble install --emulator emery --vnc
 ```
 
 `make -C tests/host` runs the unit tests for the formatting and drawing logic.
+
+## Licence
+
+Entity is free software under the GNU General Public License, version 3 or later (see
+[LICENSE](LICENSE)). Forks are welcome. If you share a changed version, it stays under the same
+licence.
