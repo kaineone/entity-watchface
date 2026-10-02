@@ -4,6 +4,7 @@
 #include "logic/fmt.h"
 #include "logic/status.h"
 #include "logic/weather.h"
+#include "logic/scanner.h"
 #include "layout.h"
 #include "palette.h"
 #include "meter_layer.h"
@@ -22,12 +23,14 @@ static void meter_view_set_mode(MeterMode mode) { rim_layer_set_mode(mode); }
 /* Round has no bursts: the rim steps once a second from the tick handler. */
 static void meter_view_set_bursting(bool bursting) { (void)bursting; }
 static void meter_view_frame(void) {}
+static void meter_view_set_shades(const ScannerShades *s) { rim_layer_set_shades(s); }
 #else
 static Layer *meter_view_create(GRect frame) { return meter_layer_create(frame); }
 static void meter_view_destroy(void) { meter_layer_destroy(); }
 static void meter_view_set_mode(MeterMode mode) { meter_layer_set_mode(mode); }
 static void meter_view_set_bursting(bool bursting) { meter_layer_set_bursting(bursting); }
 static void meter_view_frame(void) { meter_layer_frame(s_burst_left, s_burst_total); }
+static void meter_view_set_shades(const ScannerShades *s) { meter_layer_set_shades(s); }
 #endif
 
 #define WX_PERSIST_KEY 2
@@ -65,6 +68,8 @@ static char s_power_buf[STATUS_POWER_LEN];
 static char s_weather_buf[FMT_BPM_LEN];
 
 static GColor s_hour_color = PAL_HOUR_RED;
+static bool s_hour_outline = false;
+static ScannerShades s_scanner;
 static int8_t s_hour12_pref = -1;
 
 static int s_last_daykey = -1;
@@ -545,11 +550,24 @@ static void apply_settings(const Settings *s, bool redraw) {
 
   s_hour12_pref = s->clock;
 
+#if defined(PBL_COLOR)
   switch (s->hour_color) {
     case HOUR_CREAM: s_hour_color = PAL_CREAM; break;
     case HOUR_GOLD: s_hour_color = PAL_ACCENT; break;
+    case HOUR_PINK: s_hour_color = GColorBrilliantRose; break;
+    case HOUR_PURPLE: s_hour_color = GColorVividViolet; break;
+    case HOUR_BLUE: s_hour_color = GColorBlueMoon; break;
+    case HOUR_TEAL: s_hour_color = GColorTiffanyBlue; break;
+    case HOUR_GREEN: s_hour_color = GColorJaegerGreen; break;
+    case HOUR_WHITE: s_hour_color = GColorWhite; break;
     default: s_hour_color = PAL_HOUR_RED; break;
   }
+  s_hour_outline = scanner_hour_outlined(s->hour_color);
+#else
+  s_hour_color = PAL_HOUR_RED;
+  s_hour_outline = false;
+#endif
+  s_scanner = scanner_shades(s->hour_color);
 
   s_animate_pref = s->animate;
   s_vibe_pref = s->vibe_disconnect;
@@ -560,6 +578,8 @@ static void apply_settings(const Settings *s, bool redraw) {
 
   if (redraw) {
     if (s_hour_num) numeral_layer_set_color(s_hour_num, s_hour_color);
+    if (s_hour_num) numeral_layer_set_outline(s_hour_num, s_hour_outline, PAL_GOLD);
+    meter_view_set_shades(&s_scanner);
     s_hour_buf[0] = '\0';
     time_t now = time(NULL);
     update_time(localtime(&now));
@@ -592,6 +612,8 @@ static void window_load(Window *window) {
   s_ampm_layer = make_layer(frames->ampm, GTextAlignmentCenter, s_font_label, PAL_GOLD);
   s_minute_num = numeral_layer_create(frames->minute, PAL_GOLD, frames->num_gap, frames->num_stroke);
   s_meter_layer = meter_view_create(frames->meter);
+  numeral_layer_set_outline(s_hour_num, s_hour_outline, PAL_GOLD);
+  meter_view_set_shades(&s_scanner);
   s_power_layer = make_layer(frames->power, GTextAlignmentRight, s_font_label, PAL_GOLD);
   s_weather_layer = make_layer(frames->weather, GTextAlignmentRight, s_font_label, PAL_ACCENT);
   s_link_layer = link_layer_create(frames->link);

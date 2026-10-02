@@ -8,5 +8,6 @@ void numeral_layer_destroy(Layer *l);
 void numeral_layer_set_text(Layer *l, const char *text);
 void numeral_layer_set_color(Layer *l, GColor c);
 void numeral_layer_set_metrics(Layer *l, int gap, int stroke);
+void numeral_layer_set_outline(Layer *l, bool on, GColor color);
 
 #endif

@@ -11,11 +11,25 @@ static int s_second = 0;
 static int s_last_land = -1;
 static int32_t s_sin[RIM_TICKS];
 static int32_t s_cos[RIM_TICKS];
+static ScannerShades s_shades;
 
 static uint8_t s_outer_r = 127;
 static uint8_t s_max_len = RIM_MAX_LEN;
 
 static GColor ink_color(MeterInk ink) {
+#if defined(PBL_COLOR)
+  switch (ink) {
+    case INK_GOLD:     return PAL_REST;
+    case INK_RED:      return (GColor){ .argb = s_shades.cursor };
+    case INK_HEAT1:    return (GColor){ .argb = s_shades.heat[0] };
+    case INK_HEAT2:    return (GColor){ .argb = s_shades.heat[1] };
+    case INK_HEAT3:    return (GColor){ .argb = s_shades.heat[2] };
+    case INK_HEAT4:    return (GColor){ .argb = s_shades.heat[3] };
+    case INK_BASELINE: return (GColor){ .argb = s_shades.baseline };
+    case INK_DISABLED: return PAL_DISABLED;
+    default:           return PAL_BG;
+  }
+#else
   switch (ink) {
     case INK_GOLD:     return PAL_REST;
     case INK_RED:      return PAL_RED;
@@ -27,6 +41,7 @@ static GColor ink_color(MeterInk ink) {
     case INK_DISABLED: return PAL_DISABLED;
     default:           return PAL_BG;
   }
+#endif
 }
 
 static void update_proc(Layer *layer, GContext *ctx) {
@@ -82,6 +97,7 @@ Layer *rim_layer_create(GRect frame) {
   const FaceLayout *layout = layout_get();
   s_outer_r = layout->rim_outer_r;
   s_max_len = layout->rim_max_len;
+  s_shades = scanner_shades(0);
 
   for (int i = 0; i < RIM_TICKS; i++) {
     int32_t angle = TRIG_MAX_ANGLE * i / RIM_TICKS;
@@ -120,5 +136,11 @@ void rim_layer_set_time(int minute, int second) {
       s_last_land = c;
     }
   }
+  if (s_layer) layer_mark_dirty(s_layer);
+}
+
+void rim_layer_set_shades(const ScannerShades *s) {
+  if (!s) return;
+  s_shades = *s;
   if (s_layer) layer_mark_dirty(s_layer);
 }
