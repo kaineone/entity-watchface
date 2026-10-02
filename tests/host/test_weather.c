@@ -78,5 +78,10 @@ int main(void) {
   weather_temp_text(temp_buf, sizeof(temp_buf), 999, false, true);
   CHECK(strlen(temp_buf) < WEATHER_TEMP_TEXT_LEN);
 
+  CHECK(weather_is_stale(1000, 0, WEATHER_REFRESH_SECS));
+  CHECK(!weather_is_stale(100000, 100000 - 899, WEATHER_REFRESH_SECS));
+  /* Exact boundary: weather_is_stale uses age > max_age, so age == 900 is NOT stale. */
+  CHECK(!weather_is_stale(100000, 100000 - 900, WEATHER_REFRESH_SECS));
+
   TEST_MAIN_END();
 }

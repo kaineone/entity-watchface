@@ -2,6 +2,7 @@ var Clay = require('@rebble/clay');
 var clayConfig = require('./config');
 var clay = new Clay(clayConfig);
 var weather = require('./weather');
+var startup = require('./startup');
 
 function weatherEnabled() {
   if (typeof localStorage === 'undefined') return true;
@@ -16,23 +17,10 @@ function weatherEnabled() {
 
 var inflight = false;
 var retryTimer = null;
-var LAST_KEY = 'entity-last-weather';
 
-function lastFetch() {
-  if (typeof localStorage === 'undefined') return 0;
-  try {
-    var raw = localStorage.getItem(LAST_KEY);
-    var n = Number(raw);
-    return isNaN(n) ? 0 : n;
-  } catch (e) {
-    return 0;
-  }
-}
-
-function fetchWeather(force, isRetry) {
+function fetchWeather(isRetry) {
   if (!weatherEnabled()) return;
   if (inflight) return;
-  if (!force && Date.now() - lastFetch() < 15 * 60 * 1000) return;
   inflight = true;
 
   function done(ok) {
@@ -41,7 +29,7 @@ function fetchWeather(force, isRetry) {
     if (!ok && !isRetry && retryTimer === null) {
       retryTimer = setTimeout(function () {
         retryTimer = null;
-        fetchWeather(true, true);
+        fetchWeather(true);
       }, 3 * 60 * 1000);
     }
   }
@@ -64,9 +52,6 @@ function fetchWeather(force, isRetry) {
             Pebble.sendAppMessage(
               { WeatherCond: r.cond, WeatherTempC10: r.tempC10 },
               function () {
-                try {
-                  localStorage.setItem(LAST_KEY, String(Date.now()));
-                } catch (e) {}
                 done(true);
               },
               function () {
@@ -99,15 +84,35 @@ function fetchWeather(force, isRetry) {
   });
 }
 
+function sendStartup(isRetry) {
+  var raw = null;
+  try {
+    if (typeof localStorage !== 'undefined') {
+      raw = localStorage.getItem('clay-settings');
+    }
+  } catch (e) {}
+  Pebble.sendAppMessage(
+    startup.startupMessage(raw),
+    function () {},
+    function () {
+      if (!isRetry) {
+        setTimeout(function () {
+          sendStartup(true);
+        }, 3000);
+      }
+    }
+  );
+}
+
 Pebble.addEventListener('ready', function(e) {
-  fetchWeather(false);
+  sendStartup(false);
   setInterval(function () {
-    fetchWeather(true);
+    fetchWeather(false);
   }, 30 * 60 * 1000);
 });
 
 Pebble.addEventListener('appmessage', function(e) {
   if (e.payload && e.payload.WeatherRequest) {
-    fetchWeather(true);
+    fetchWeather(false);
   }
 });
