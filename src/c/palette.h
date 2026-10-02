@@ -5,15 +5,16 @@
 
 #if defined(PBL_COLOR)
 #define PAL_BG         GColorBlack
-#define PAL_GOLD       GColorBrass
-#define PAL_ACCENT     GColorRajah
+#define PAL_GOLD       GColorYellow
+#define PAL_ACCENT     GColorChromeYellow
 #define PAL_CREAM      GColorPastelYellow
-#define PAL_HOUR_RED   GColorSunsetOrange
+#define PAL_HOUR_RED   GColorRed
 #define PAL_RED        GColorRed
 #define PAL_HEAT1      GColorOrange
-#define PAL_HEAT2      GColorSunsetOrange
-#define PAL_HEAT3      GColorChromeYellow
-#define PAL_HEAT4      GColorRajah
+#define PAL_HEAT2      GColorChromeYellow
+#define PAL_HEAT3      GColorRajah
+#define PAL_HEAT4      GColorYellow
+#define PAL_REST       GColorLimerick
 #define PAL_BASELINE   GColorBulgarianRose
 #define PAL_DISABLED   GColorDarkGray
 #define PAL_QUIET      GColorWindsorTan
@@ -28,6 +29,7 @@
 #define PAL_HEAT2      GColorWhite
 #define PAL_HEAT3      GColorWhite
 #define PAL_HEAT4      GColorWhite
+#define PAL_REST       GColorWhite
 #define PAL_BASELINE   GColorWhite
 #define PAL_DISABLED   GColorWhite
 #define PAL_QUIET      GColorWhite

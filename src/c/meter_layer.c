@@ -17,7 +17,7 @@ static uint8_t s_max_h = 22;
 #if defined(PBL_COLOR)
 static GColor color_for_ink(MeterInk ink) {
   switch (ink) {
-    case INK_GOLD:     return PAL_GOLD;
+    case INK_GOLD:     return PAL_REST;
     case INK_RED:      return PAL_RED;
     case INK_HEAT1:    return PAL_HEAT1;
     case INK_HEAT2:    return PAL_HEAT2;

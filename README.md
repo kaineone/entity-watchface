@@ -25,10 +25,10 @@ the time the bars sit still. It won't move at all when your battery is low (20% 
 different number in the settings), during quiet time, while a timeline peek covers the screen, or
 if you switch the animation off.
 
-## Fonts
+## Type
 
-Orbitron is by The Orbitron Project Authors and JetBrains Mono is by JetBrains. Both are under
-the SIL Open Font License 1.1, and you'll find the license texts in `resources/fonts/`.
+The numerals are drawn as blocky shapes, so the face carries no font files. Labels use
+Pebble's own Gothic, which is built into the watch.
 
 ## Development
 
