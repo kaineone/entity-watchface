@@ -38,7 +38,11 @@ static void update_proc(Layer *layer, GContext *ctx) {
   int32_t cy = b.size.h / 2;
   int32_t orad = s_outer_r;
 
+#if defined(PBL_COLOR)
+  graphics_context_set_antialiased(ctx, true);
+#else
   graphics_context_set_antialiased(ctx, false);
+#endif
   graphics_context_set_stroke_width(ctx, 1);
 
   for (int i = 0; i < RIM_TICKS; i++) {
