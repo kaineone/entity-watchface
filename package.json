@@ -49,6 +49,7 @@
           "name": "ORB_64",
           "file": "fonts/Orbitron-Black.ttf",
           "characterRegex": "[0-9]",
+          "trackingAdjust": 6,
           "targetPlatforms": [
             "emery"
           ]
@@ -58,6 +59,7 @@
           "name": "ORB_60",
           "file": "fonts/Orbitron-Black.ttf",
           "characterRegex": "[0-9]",
+          "trackingAdjust": 6,
           "targetPlatforms": [
             "gabbro"
           ]
@@ -67,6 +69,7 @@
           "name": "ORB_48",
           "file": "fonts/Orbitron-Black.ttf",
           "characterRegex": "[0-9]",
+          "trackingAdjust": 5,
           "targetPlatforms": [
             "emery",
             "gabbro",
@@ -79,6 +82,7 @@
           "name": "ORB_42",
           "file": "fonts/Orbitron-Black.ttf",
           "characterRegex": "[0-9]",
+          "trackingAdjust": 4,
           "targetPlatforms": [
             "chalk"
           ]
@@ -88,6 +92,7 @@
           "name": "ORB_36",
           "file": "fonts/Orbitron-Black.ttf",
           "characterRegex": "[0-9]",
+          "trackingAdjust": 4,
           "targetPlatforms": [
             "basalt",
             "flint"
@@ -97,7 +102,7 @@
           "type": "font",
           "name": "LABEL_16",
           "file": "fonts/JetBrainsMono-Medium.ttf",
-          "characterRegex": "[a-z0-9 .°%+~-]",
+          "characterRegex": "[A-Z0-9 .°%+~-]",
           "targetPlatforms": [
             "emery",
             "gabbro"
@@ -107,7 +112,7 @@
           "type": "font",
           "name": "LABEL_12",
           "file": "fonts/JetBrainsMono-Medium.ttf",
-          "characterRegex": "[a-z0-9 .°%+~-]",
+          "characterRegex": "[A-Z0-9 .°%+~-]",
           "targetPlatforms": [
             "basalt",
             "chalk",
