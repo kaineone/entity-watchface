@@ -9,8 +9,8 @@ ages it in the top-right readout of the Pebble Time 2 face.
 ### Requirement: Fetch on the phone
 When weather is on, the phone SHALL get the location (timeout 15 s, accepting a cached fix up to
 30 minutes old), fetch current temperature and weather code from Open-Meteo, and send a message
-to the watch when the face starts and then every 30 minutes. When weather is off it SHALL not
-request the location or the network.
+to the watch when the watch asks for it and then every 30 minutes. When weather is off it SHALL
+not request the location or the network.
 
 #### Scenario: Weather off
 - **WHEN** the user has switched weather off
@@ -72,13 +72,18 @@ A reading dated more than 5 minutes after the watch's current time SHALL be trea
 - **THEN** the readout shows the stale style
 
 ### Requirement: Fetch discipline
-The phone SHALL make at most one weather request at a time, give up on a request after 10 s,
-retry once 3 minutes after a failure, and skip a fetch on launch if the last successful fetch was
-less than 15 minutes ago. Coordinates SHALL be rounded to 0.1°.
+The phone SHALL make at most one weather request at a time, give up on a request after 10 s, and
+retry once 3 minutes after a failure. When the face starts, the watch SHALL ask for weather only if
+weather is on and its own reading is missing or at least 15 minutes old. Coordinates SHALL be
+rounded to 0.1°.
 
 #### Scenario: Re-opening the face
-- **WHEN** the face is reopened 5 minutes after a successful fetch
-- **THEN** no network request is made
+- **WHEN** the face is reopened 5 minutes after the watch received a reading
+- **THEN** the watch does not ask for weather and no network request is made
+
+#### Scenario: Second watch on the same phone
+- **WHEN** a watch with no saved reading starts the face minutes after another watch fetched
+- **THEN** it asks for weather and shows the temperature
 
 ### Requirement: Temperature-only readout
 The weather readout SHALL show only the rounded temperature with a degree sign (`26°`, `-3°`),
