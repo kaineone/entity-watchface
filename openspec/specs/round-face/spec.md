@@ -45,23 +45,18 @@ FFAA00, FFAA55 for d = 1..4. All other ticks SHALL sit at their resting length i
 
 ### Requirement: Rim states and cost
 Unlinked SHALL draw all ticks 2 px in 555555; frozen all ticks 2 px in AAAA55 (same freeze rules
-as the rectangular meter). The face SHALL subscribe to SECOND_UNIT ticks only on gabbro and only
-while the rim animates and the face has focus; otherwise MINUTE_UNIT. Each second SHALL mark only
-the rim layer dirty.
+as the rectangular meter). Round faces SHALL subscribe to SECOND_UNIT ticks only while the rim
+animates and the face has focus, and MINUTE_UNIT otherwise. Each second SHALL mark only the rim
+layer dirty. Round faces SHALL NOT run bursts or any frame timer; a wrist flick does not change the
+rim.
 
 #### Scenario: Low battery on round
 - **WHEN** the battery drops to the threshold while not charging
 - **THEN** the face switches to minute ticks and draws the frozen rim once
 
-### Requirement: Rim bursts with a sliding cursor
-Round faces SHALL use the same bursts at 5 frames per second and SHALL NOT subscribe to second
-ticks. During a burst the cursor follows the current second including milliseconds; its length is
-split between the two ticks it lies between in proportion to its position. Outside bursts the
-ticks rest in gold.
-
-#### Scenario: Between seconds
-- **WHEN** the time is 10:02:15.5 during a burst
-- **THEN** ticks 15 and 16 both show part of the cursor length
+#### Scenario: Flick on round
+- **WHEN** the user flicks their wrist on a Pebble Round 2
+- **THEN** the rim keeps stepping once a second and no frame timer starts
 
 ### Requirement: Smooth rim ticks
 On colour round watches the rim ticks SHALL be drawn with stroke anti-aliasing enabled.
