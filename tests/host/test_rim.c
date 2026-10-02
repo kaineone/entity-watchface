@@ -150,5 +150,47 @@ int main(void) {
     }
   }
 
+  /* rim_tick_frac at ms 0 matches discrete rim_tick */
+  for (int minute = 0; minute < 3; minute++) {
+    for (int second = 0; second < 60; second++) {
+      for (int i = 0; i < RIM_TICKS; i++) {
+        TickStyle st  = rim_tick(&rm, MODE_ANIMATING, minute, second, i);
+        TickStyle stf = rim_tick_frac(&rm, MODE_ANIMATING, true, minute, second, 0, i);
+        CHECK_EQ_INT(stf.len, st.len);
+        CHECK_EQ_INT(stf.ink, st.ink);
+      }
+    }
+  }
+
+  /* 10:02:15.500 -> ticks 15 and 16 are both boosted */
+  {
+    TickStyle st15 = rim_tick_frac(&rm, MODE_ANIMATING, true, 2, 15, 500, 15);
+    TickStyle st16 = rim_tick_frac(&rm, MODE_ANIMATING, true, 2, 15, 500, 16);
+    CHECK(st15.len > rm.rest[15]);
+    CHECK_EQ_INT(st15.ink, INK_RED);
+    CHECK(st16.len > rm.rest[16]);
+    CHECK_EQ_INT(st16.ink, INK_RED);
+  }
+
+  /* 10:01:15.250 -> fractional cursor covers ticks 45 and 44 */
+  {
+    TickStyle st45 = rim_tick_frac(&rm, MODE_ANIMATING, true, 1, 15, 250, 45);
+    TickStyle st44 = rim_tick_frac(&rm, MODE_ANIMATING, true, 1, 15, 250, 44);
+    TickStyle st43 = rim_tick_frac(&rm, MODE_ANIMATING, true, 1, 15, 250, 43);
+    TickStyle st46 = rim_tick_frac(&rm, MODE_ANIMATING, true, 1, 15, 250, 46);
+    CHECK_EQ_INT(st45.ink, INK_RED);
+    CHECK(st45.len > rm.rest[45]);
+    CHECK(st44.ink != INK_GOLD);
+    CHECK(st43.ink == INK_GOLD);
+    CHECK(st46.ink != INK_RED);
+  }
+
+  /* rim_tick_frac idle mode */
+  for (int i = 0; i < RIM_TICKS; i++) {
+    TickStyle st = rim_tick_frac(&rm, MODE_ANIMATING, false, 1, 15, 500, i);
+    CHECK_EQ_INT(st.len, rm.rest[i]);
+    CHECK_EQ_INT(st.ink, INK_GOLD);
+  }
+
   TEST_MAIN_END();
 }
