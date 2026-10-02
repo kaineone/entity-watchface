@@ -5,8 +5,8 @@
 Entity is a watchface for the Pebble Time 2 and Pebble Round 2. It also runs on the original
 Pebble Time, Time Steel and Time Round, and on the Pebble 2 Duo.
 
-It isn't in the Pebble appstore yet. Once it's finished and we've tried it on real watches, you'll
-be able to install it straight from the Pebble app on your phone, and a link will go here.
+Install it from the [Pebble appstore](https://apps.repebble.com/7beca89f985f493dbccbd9bd), or
+search for Entity in the Pebble app on your phone. It's free.
 
 Most of the screen is the time, in big bold numerals with the hour stacked over the minute. Along
 the bottom is a row of bars that shows whether your watch can reach your phone. Flick your wrist
