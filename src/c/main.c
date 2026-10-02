@@ -20,13 +20,15 @@ static Layer *meter_view_create(GRect frame) { return rim_layer_create(frame); }
 static void meter_view_destroy(void) { rim_layer_destroy(); }
 static void meter_view_set_mode(MeterMode mode) { rim_layer_set_mode(mode); }
 static void meter_view_set_bursting(bool bursting) { rim_layer_set_bursting(bursting); }
-static void meter_view_frame(void) { rim_layer_frame(); }
+static void meter_view_frame(void) { rim_layer_frame(s_burst_left, s_burst_total); }
+static void meter_view_start(void) { rim_layer_start(); }
 #else
 static Layer *meter_view_create(GRect frame) { return meter_layer_create(frame); }
 static void meter_view_destroy(void) { meter_layer_destroy(); }
 static void meter_view_set_mode(MeterMode mode) { meter_layer_set_mode(mode); }
 static void meter_view_set_bursting(bool bursting) { meter_layer_set_bursting(bursting); }
 static void meter_view_frame(void) { meter_layer_frame(s_burst_left, s_burst_total); }
+static void meter_view_start(void) { }
 #endif
 
 #define WX_PERSIST_KEY 2
@@ -38,9 +40,10 @@ typedef struct __attribute__((__packed__)) {
   int32_t time;
 } WxPersist;
 
-#define BURST_FRAME_MS PBL_IF_ROUND_ELSE(200, 100)
+#define BURST_FRAME_MS 100
 #define BURST_LONG (25000 / BURST_FRAME_MS)
-#define BURST_SHORT (4000 / BURST_FRAME_MS)
+/* Round: exactly one lap so the rim comes to rest at 12. */
+#define BURST_SHORT PBL_IF_ROUND_ELSE(RIM_LEG_FRAMES, 4000 / BURST_FRAME_MS)
 #define DOUBLE_TAP_MS 700
 
 static Window *s_window;
@@ -385,6 +388,7 @@ static void start_burst(int frames) {
 
   s_burst_left = frames;
   s_burst_total = frames;
+  meter_view_start();
   meter_view_set_bursting(true);
   s_burst_timer = app_timer_register((uint32_t)BURST_FRAME_MS, burst_cb, NULL);
 }

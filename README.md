@@ -14,8 +14,8 @@ a minute. If the connection drops, the bars flatten out and turn grey, so you ca
 The top of the screen has the date and the temperature. Double tap the watch and it switches over
 to your steps and heart rate for a few seconds, then flips back.
 
-On the round watches the bars wrap around the edge of the screen as tick marks, and the red one
-travels around the rim.
+On the round watches the bars wrap around the edge of the screen as tick marks. The red one runs
+all the way round to the top, turns, and comes back the other way.
 
 ## Battery
 

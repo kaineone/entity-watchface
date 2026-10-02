@@ -7,10 +7,6 @@ static Layer *s_layer = NULL;
 static RimMeter s_rim;
 static MeterMode s_mode = MODE_FROZEN;
 static bool s_bursting = false;
-static int s_minute = 0;
-static int s_second = 0;
-static int s_ms = 0;
-static int s_last_land = -1;
 static int32_t s_sin[RIM_TICKS];
 static int32_t s_cos[RIM_TICKS];
 
@@ -46,7 +42,7 @@ static void update_proc(Layer *layer, GContext *ctx) {
   graphics_context_set_stroke_width(ctx, 1);
 
   for (int i = 0; i < RIM_TICKS; i++) {
-    TickStyle st = rim_tick_frac(&s_rim, s_mode, s_bursting, s_minute, s_second, s_ms, i);
+    TickStyle st = rim_tick(&s_rim, s_mode, s_bursting, i);
     if (st.len == 0) continue;
 
     int len = st.len;
@@ -75,10 +71,6 @@ Layer *rim_layer_create(GRect frame) {
   rim_init(&s_rim, (uint32_t)time(NULL));
   s_mode = MODE_FROZEN;
   s_bursting = false;
-  s_minute = 0;
-  s_second = 0;
-  s_ms = 0;
-  s_last_land = -1;
 
   const FaceLayout *layout = layout_get();
   s_outer_r = layout->rim_outer_r;
@@ -118,23 +110,11 @@ void rim_layer_set_bursting(bool bursting) {
   }
 }
 
-void rim_layer_frame(void) {
-  time_t t;
-  uint16_t ms;
-  time_ms(&t, &ms);
-  struct tm *tm = localtime(&t);
+void rim_layer_start(void) {
+  rim_start(&s_rim);
+}
 
-  s_minute = tm->tm_min;
-  s_second = tm->tm_sec;
-  s_ms = ms;
-
-  if (s_mode == MODE_ANIMATING) {
-    int c = rim_cursor(s_minute, s_second);
-    if (c != s_last_land) {
-      rim_land(&s_rim, c);
-      s_last_land = c;
-    }
-  }
-
+void rim_layer_frame(int frames_left, int frames_total) {
+  rim_frame(&s_rim, frames_left, frames_total);
   if (s_layer) layer_mark_dirty(s_layer);
 }
