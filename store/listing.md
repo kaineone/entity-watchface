@@ -1,7 +1,7 @@
 # Entity: appstore listing
 
-> DRAFT. Not approved. Nothing here may be published or submitted until the owner has
-> confirmed every word.
+> Approved by the owner on 2026-10-02. Publishing to the appstore still happens only when the
+> owner asks for it.
 
 ## Name
 
