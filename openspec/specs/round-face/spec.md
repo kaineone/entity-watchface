@@ -34,10 +34,11 @@ the cursor lands on a tick, that tick's resting length SHALL be re-randomised wi
 - **THEN** the cursor is tick 45
 
 ### Requirement: Rim trail
-The cursor tick SHALL be 18 px and FF0000. The trail covers the min(5, s) ticks the cursor has
-passed since the turn at 12, on the side it came from; a trail tick at distance d SHALL be
-min(18, rest + boost(d)) long with boost 8, 4, 2, 0 for d = 1..4, coloured FF5500, FF5555,
-FFAA00, FFAA55 for d = 1..4. All other ticks SHALL sit at their resting length in AAAA55. No dither.
+The cursor tick SHALL be 18 px in the scanner colour. The trail covers the min(5, s) ticks the
+cursor has passed since the turn at 12, on the side it came from; a trail tick at distance d SHALL
+be min(18, rest + boost(d)) long with boost 8, 4, 2, 0 for d = 1..4, coloured with the scanner's
+trail shade for d. All other ticks SHALL sit at their resting length in AAAA55. No dither. The
+scanner colours follow the hour colour exactly as on the rectangular meter.
 
 #### Scenario: Just after the turn
 - **WHEN** the time is 10:02:02
