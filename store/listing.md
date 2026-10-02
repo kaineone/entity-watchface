@@ -1,7 +1,8 @@
 # Entity: appstore listing
 
-> Approved by the owner on 2026-10-02. Publishing to the appstore still happens only when the
-> owner asks for it.
+> Approved by the owner on 2026-10-02 and published on 2026-10-02 as version 26.1:
+> https://apps.repebble.com/7beca89f985f493dbccbd9bd. Later releases still go out only when the
+> owner asks.
 
 ## Name
 
