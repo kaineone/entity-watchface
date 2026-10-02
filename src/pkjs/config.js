@@ -57,8 +57,14 @@ module.exports = [
         capabilities: ["COLOR"],
         options: [
           { label: "Red", value: "0" },
+          { label: "Pink", value: "3" },
+          { label: "Purple", value: "4" },
+          { label: "Blue", value: "5" },
+          { label: "Teal", value: "6" },
+          { label: "Green", value: "7" },
           { label: "Cream", value: "1" },
-          { label: "Gold", value: "2" }
+          { label: "Gold", value: "2" },
+          { label: "White", value: "8" }
         ]
       }
     ]

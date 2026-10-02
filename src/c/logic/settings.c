@@ -20,7 +20,7 @@ void settings_defaults(Settings *s) {
 bool settings_valid(const Settings *s) {
   if (s->version != SETTINGS_VERSION) return false;
   if (s->clock < -1 || s->clock > 1) return false;
-  if (s->hour_color > HOUR_GOLD) return false;
+  if (s->hour_color > HOUR_WHITE) return false;
   if (s->low_battery != 10 && s->low_battery != 20 &&
       s->low_battery != 30 && s->low_battery != 50) return false;
   return true;
@@ -55,7 +55,7 @@ bool settings_set_clock_str(Settings *s, const char *v) {
 }
 
 bool settings_set_hour_color(Settings *s, int v) {
-  if (v < HOUR_RED || v > HOUR_GOLD) return false;
+  if (v < HOUR_RED || v > HOUR_WHITE) return false;
   if (s->hour_color == (uint8_t)v) return false;
   s->hour_color = (uint8_t)v;
   return true;
@@ -66,6 +66,12 @@ bool settings_set_hour_color_str(Settings *s, const char *v) {
   if (strcmp(v, "red") == 0) return settings_set_hour_color(s, HOUR_RED);
   if (strcmp(v, "cream") == 0) return settings_set_hour_color(s, HOUR_CREAM);
   if (strcmp(v, "gold") == 0) return settings_set_hour_color(s, HOUR_GOLD);
+  if (strcmp(v, "pink") == 0) return settings_set_hour_color(s, HOUR_PINK);
+  if (strcmp(v, "purple") == 0) return settings_set_hour_color(s, HOUR_PURPLE);
+  if (strcmp(v, "blue") == 0) return settings_set_hour_color(s, HOUR_BLUE);
+  if (strcmp(v, "teal") == 0) return settings_set_hour_color(s, HOUR_TEAL);
+  if (strcmp(v, "green") == 0) return settings_set_hour_color(s, HOUR_GREEN);
+  if (strcmp(v, "white") == 0) return settings_set_hour_color(s, HOUR_WHITE);
   int r;
   if (!parse_int_str(v, &r)) return false;
   return settings_set_hour_color(s, r);

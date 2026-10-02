@@ -9,7 +9,13 @@
 typedef enum {
   HOUR_RED = 0,
   HOUR_CREAM = 1,
-  HOUR_GOLD = 2
+  HOUR_GOLD = 2,
+  HOUR_PINK = 3,
+  HOUR_PURPLE = 4,
+  HOUR_BLUE = 5,
+  HOUR_TEAL = 6,
+  HOUR_GREEN = 7,
+  HOUR_WHITE = 8
 } HourColor;
 
 typedef struct {

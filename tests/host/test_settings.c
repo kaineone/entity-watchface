@@ -44,7 +44,8 @@ static void test_hour_color_setters(void) {
   CHECK(settings_set_hour_color(&s, HOUR_GOLD));
   CHECK_EQ_INT(s.hour_color, HOUR_GOLD);
   CHECK(!settings_set_hour_color(&s, HOUR_GOLD));
-  CHECK(!settings_set_hour_color(&s, 3));
+  CHECK(!settings_set_hour_color(&s, 9));
+  CHECK(!settings_set_hour_color(&s, -1));
   CHECK_EQ_INT(s.hour_color, HOUR_GOLD);
 
   settings_defaults(&s);
@@ -57,9 +58,28 @@ static void test_hour_color_setters(void) {
   CHECK_EQ_INT(s.hour_color, HOUR_RED);
   CHECK(settings_set_hour_color_str(&s, "2"));
   CHECK_EQ_INT(s.hour_color, HOUR_GOLD);
-  CHECK(!settings_set_hour_color_str(&s, "blue"));
+
+  CHECK(settings_set_hour_color_str(&s, "pink"));
+  CHECK_EQ_INT(s.hour_color, HOUR_PINK);
+  CHECK(settings_set_hour_color_str(&s, "purple"));
+  CHECK_EQ_INT(s.hour_color, HOUR_PURPLE);
+  CHECK(settings_set_hour_color_str(&s, "blue"));
+  CHECK_EQ_INT(s.hour_color, HOUR_BLUE);
+  CHECK(settings_set_hour_color_str(&s, "teal"));
+  CHECK_EQ_INT(s.hour_color, HOUR_TEAL);
+  CHECK(settings_set_hour_color_str(&s, "green"));
+  CHECK_EQ_INT(s.hour_color, HOUR_GREEN);
+  CHECK(settings_set_hour_color_str(&s, "white"));
+  CHECK_EQ_INT(s.hour_color, HOUR_WHITE);
+  CHECK(settings_set_hour_color_str(&s, "red"));
+  CHECK(settings_set_hour_color_str(&s, "8"));
+  CHECK_EQ_INT(s.hour_color, HOUR_WHITE);
+
+  CHECK(!settings_set_hour_color_str(&s, "orange"));
   CHECK(!settings_set_hour_color_str(&s, "Red"));
-  CHECK_EQ_INT(s.hour_color, HOUR_GOLD);
+  CHECK(!settings_set_hour_color_str(&s, "9"));
+  CHECK(!settings_set_hour_color_str(&s, "-1"));
+  CHECK_EQ_INT(s.hour_color, HOUR_WHITE);
 }
 
 static void test_low_battery_setters(void) {
@@ -103,7 +123,7 @@ static void test_valid_rejects(void) {
   s.clock = 2;
   CHECK(!settings_valid(&s));
   settings_defaults(&s);
-  s.hour_color = 3;
+  s.hour_color = 9;
   CHECK(!settings_valid(&s));
   settings_defaults(&s);
   s.low_battery = 25;

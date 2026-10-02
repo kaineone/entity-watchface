@@ -9,6 +9,7 @@ static Layer *s_layer;
 static Glide s_glide;
 static MeterMode s_mode;
 static bool s_bursting = false;
+static ScannerShades s_shades;
 
 static uint8_t s_pitch = 9;
 static uint8_t s_bar_w = 7;
@@ -18,12 +19,12 @@ static uint8_t s_max_h = 22;
 static GColor color_for_ink(MeterInk ink) {
   switch (ink) {
     case INK_GOLD:     return PAL_REST;
-    case INK_RED:      return PAL_RED;
-    case INK_HEAT1:    return PAL_HEAT1;
-    case INK_HEAT2:    return PAL_HEAT2;
-    case INK_HEAT3:    return PAL_HEAT3;
-    case INK_HEAT4:    return PAL_HEAT4;
-    case INK_BASELINE: return PAL_BASELINE;
+    case INK_RED:      return (GColor){ .argb = s_shades.cursor };
+    case INK_HEAT1:    return (GColor){ .argb = s_shades.heat[0] };
+    case INK_HEAT2:    return (GColor){ .argb = s_shades.heat[1] };
+    case INK_HEAT3:    return (GColor){ .argb = s_shades.heat[2] };
+    case INK_HEAT4:    return (GColor){ .argb = s_shades.heat[3] };
+    case INK_BASELINE: return (GColor){ .argb = s_shades.baseline };
     case INK_DISABLED: return PAL_DISABLED;
     default:           return PAL_DISABLED;
   }
@@ -116,6 +117,7 @@ Layer *meter_layer_create(GRect frame) {
   s_pitch = layout->meter_pitch;
   s_bar_w = layout->meter_bar_w;
   s_max_h = layout->meter_max_h;
+  s_shades = scanner_shades(0);
 
   s_layer = layer_create(frame);
   if (!s_layer) return NULL;
@@ -151,5 +153,11 @@ void meter_layer_set_bursting(bool bursting) {
 
 void meter_layer_frame(int frames_left, int frames_total) {
   glide_frame(&s_glide, frames_left, frames_total);
+  if (s_layer) layer_mark_dirty(s_layer);
+}
+
+void meter_layer_set_shades(const ScannerShades *s) {
+  if (!s) return;
+  s_shades = *s;
   if (s_layer) layer_mark_dirty(s_layer);
 }
