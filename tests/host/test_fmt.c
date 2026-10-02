@@ -83,5 +83,54 @@ int main(void) {
   fmt_bpm(bpm_buf, sizeof(bpm_buf), 180);
   CHECK_STR(bpm_buf, "180 bpm");
 
+  char locale_buf[FMT_DATE_LOCALE_LEN];
+  fmt_date_locale(locale_buf, sizeof(locale_buf), 4, 1, 9, true);
+  CHECK_STR(locale_buf, "thu oct 1");
+  fmt_date_locale(locale_buf, sizeof(locale_buf), 4, 1, 9, false);
+  CHECK_STR(locale_buf, "thu 1 oct");
+  fmt_date_locale(locale_buf, sizeof(locale_buf), 3, 30, 8, true);
+  CHECK_STR(locale_buf, "wed sep 30");
+  fmt_date_locale(locale_buf, sizeof(locale_buf), 3, 30, 8, false);
+  CHECK_STR(locale_buf, "wed 30 sep");
+  fmt_date_locale(locale_buf, sizeof(locale_buf), 0, 31, 11, true);
+  CHECK_STR(locale_buf, "sun dec 31");
+  fmt_date_locale(locale_buf, sizeof(locale_buf), 0, 31, 11, false);
+  CHECK_STR(locale_buf, "sun 31 dec");
+
+  fmt_date_locale(locale_buf, sizeof(locale_buf), 0, 15, 0, true);
+  CHECK_STR(locale_buf, "sun jan 15");
+  fmt_date_locale(locale_buf, sizeof(locale_buf), 0, 15, 1, true);
+  CHECK_STR(locale_buf, "sun feb 15");
+  fmt_date_locale(locale_buf, sizeof(locale_buf), 0, 15, 2, true);
+  CHECK_STR(locale_buf, "sun mar 15");
+  fmt_date_locale(locale_buf, sizeof(locale_buf), 0, 15, 3, true);
+  CHECK_STR(locale_buf, "sun apr 15");
+  fmt_date_locale(locale_buf, sizeof(locale_buf), 0, 15, 4, true);
+  CHECK_STR(locale_buf, "sun may 15");
+  fmt_date_locale(locale_buf, sizeof(locale_buf), 0, 15, 5, true);
+  CHECK_STR(locale_buf, "sun jun 15");
+  fmt_date_locale(locale_buf, sizeof(locale_buf), 0, 15, 6, true);
+  CHECK_STR(locale_buf, "sun jul 15");
+  fmt_date_locale(locale_buf, sizeof(locale_buf), 0, 15, 7, true);
+  CHECK_STR(locale_buf, "sun aug 15");
+  fmt_date_locale(locale_buf, sizeof(locale_buf), 0, 15, 8, true);
+  CHECK_STR(locale_buf, "sun sep 15");
+  fmt_date_locale(locale_buf, sizeof(locale_buf), 0, 15, 9, true);
+  CHECK_STR(locale_buf, "sun oct 15");
+  fmt_date_locale(locale_buf, sizeof(locale_buf), 0, 15, 10, true);
+  CHECK_STR(locale_buf, "sun nov 15");
+  fmt_date_locale(locale_buf, sizeof(locale_buf), 0, 15, 11, true);
+  CHECK_STR(locale_buf, "sun dec 15");
+
+  fmt_date_locale(locale_buf, sizeof(locale_buf), 7, 1, 12, true);
+  CHECK_STR(locale_buf, "sun jan 1");
+
+  CHECK(fmt_locale_month_first("en_US"));
+  CHECK(fmt_locale_month_first("en_US.UTF-8"));
+  CHECK(!fmt_locale_month_first("en_GB"));
+  CHECK(!fmt_locale_month_first("de_DE"));
+  CHECK(!fmt_locale_month_first(""));
+  CHECK(!fmt_locale_month_first(NULL));
+
   TEST_MAIN_END();
 }

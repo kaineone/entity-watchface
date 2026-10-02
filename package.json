@@ -46,8 +46,8 @@
       "media": [
         {
           "type": "font",
-          "name": "ZEN_64",
-          "file": "fonts/ZenDots-Regular.ttf",
+          "name": "ORB_64",
+          "file": "fonts/Orbitron-Black.ttf",
           "characterRegex": "[0-9]",
           "targetPlatforms": [
             "emery"
@@ -55,8 +55,8 @@
         },
         {
           "type": "font",
-          "name": "ZEN_60",
-          "file": "fonts/ZenDots-Regular.ttf",
+          "name": "ORB_60",
+          "file": "fonts/Orbitron-Black.ttf",
           "characterRegex": "[0-9]",
           "targetPlatforms": [
             "gabbro"
@@ -64,8 +64,8 @@
         },
         {
           "type": "font",
-          "name": "ZEN_48",
-          "file": "fonts/ZenDots-Regular.ttf",
+          "name": "ORB_48",
+          "file": "fonts/Orbitron-Black.ttf",
           "characterRegex": "[0-9]",
           "targetPlatforms": [
             "emery",
@@ -76,8 +76,8 @@
         },
         {
           "type": "font",
-          "name": "ZEN_42",
-          "file": "fonts/ZenDots-Regular.ttf",
+          "name": "ORB_42",
+          "file": "fonts/Orbitron-Black.ttf",
           "characterRegex": "[0-9]",
           "targetPlatforms": [
             "chalk"
@@ -85,8 +85,8 @@
         },
         {
           "type": "font",
-          "name": "ZEN_36",
-          "file": "fonts/ZenDots-Regular.ttf",
+          "name": "ORB_36",
+          "file": "fonts/Orbitron-Black.ttf",
           "characterRegex": "[0-9]",
           "targetPlatforms": [
             "basalt",
