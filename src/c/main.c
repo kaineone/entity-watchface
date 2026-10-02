@@ -19,16 +19,15 @@ static int s_burst_total = 0;
 static Layer *meter_view_create(GRect frame) { return rim_layer_create(frame); }
 static void meter_view_destroy(void) { rim_layer_destroy(); }
 static void meter_view_set_mode(MeterMode mode) { rim_layer_set_mode(mode); }
-static void meter_view_set_bursting(bool bursting) { rim_layer_set_bursting(bursting); }
-static void meter_view_frame(void) { rim_layer_frame(s_burst_left, s_burst_total); }
-static void meter_view_start(void) { rim_layer_start(); }
+/* Round has no bursts: the rim steps once a second from the tick handler. */
+static void meter_view_set_bursting(bool bursting) { (void)bursting; }
+static void meter_view_frame(void) {}
 #else
 static Layer *meter_view_create(GRect frame) { return meter_layer_create(frame); }
 static void meter_view_destroy(void) { meter_layer_destroy(); }
 static void meter_view_set_mode(MeterMode mode) { meter_layer_set_mode(mode); }
 static void meter_view_set_bursting(bool bursting) { meter_layer_set_bursting(bursting); }
 static void meter_view_frame(void) { meter_layer_frame(s_burst_left, s_burst_total); }
-static void meter_view_start(void) { }
 #endif
 
 #define WX_PERSIST_KEY 2
@@ -42,8 +41,7 @@ typedef struct __attribute__((__packed__)) {
 
 #define BURST_FRAME_MS 100
 #define BURST_LONG (25000 / BURST_FRAME_MS)
-/* Round: exactly one lap so the rim comes to rest at 12. */
-#define BURST_SHORT PBL_IF_ROUND_ELSE(RIM_LEG_FRAMES, 4000 / BURST_FRAME_MS)
+#define BURST_SHORT (4000 / BURST_FRAME_MS)
 #define DOUBLE_TAP_MS 700
 
 static Window *s_window;
@@ -255,6 +253,9 @@ static void update_time(struct tm *tick_time) {
 }
 
 static void tick_handler(struct tm *tick_time, TimeUnits units_changed) {
+#if defined(PBL_ROUND)
+  rim_layer_set_time(tick_time->tm_min, tick_time->tm_sec);
+#endif
   if (units_changed & MINUTE_UNIT) {
     update_time(tick_time);
     meter_refresh();
@@ -376,6 +377,7 @@ static void burst_cb(void *data) {
 }
 
 static void start_burst(int frames) {
+  if (PBL_IF_ROUND_ELSE(true, false)) return;  /* round steps with the clock instead */
   if (s_meter_mode != MODE_ANIMATING || !s_focused) return;
 
   if (s_burst_left > 0) {
@@ -388,9 +390,27 @@ static void start_burst(int frames) {
 
   s_burst_left = frames;
   s_burst_total = frames;
-  meter_view_start();
   meter_view_set_bursting(true);
   s_burst_timer = app_timer_register((uint32_t)BURST_FRAME_MS, burst_cb, NULL);
+}
+
+static TimeUnits s_tick_units = 0;
+
+/* Second ticks only while the round rim animates in focus; minute ticks otherwise. */
+static void update_tick_subscription(void) {
+#if defined(PBL_ROUND)
+  TimeUnits units = (s_meter_mode == MODE_ANIMATING && s_focused) ? SECOND_UNIT : MINUTE_UNIT;
+#else
+  TimeUnits units = MINUTE_UNIT;
+#endif
+  if (units == s_tick_units) return;
+  s_tick_units = units;
+  tick_timer_service_subscribe(units, tick_handler);
+#if defined(PBL_ROUND)
+  time_t now = time(NULL);
+  struct tm *t = localtime(&now);
+  rim_layer_set_time(t->tm_min, t->tm_sec);
+#endif
 }
 
 static void meter_refresh(void) {
@@ -405,6 +425,8 @@ static void meter_refresh(void) {
   if (mode != MODE_ANIMATING || !s_focused) {
     stop_burst();
   }
+
+  update_tick_subscription();
 }
 
 static long read_steps(void) {
@@ -601,7 +623,7 @@ static void window_load(Window *window) {
   quiet_layer_set_visible(s_quiet);
   update_weather();
 
-  tick_timer_service_subscribe(MINUTE_UNIT, tick_handler);
+  s_tick_units = 0;  /* meter_refresh() below subscribes */
 
   unobstructed_area_service_subscribe((UnobstructedAreaHandlers) {
     .did_change = unobstructed_did_change
@@ -713,6 +735,7 @@ static void init(void) {
 
 static void deinit(void) {
   tick_timer_service_unsubscribe();
+  s_tick_units = 0;
   unobstructed_area_service_unsubscribe();
   app_message_deregister_callbacks();
   if (s_window) {

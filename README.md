@@ -14,8 +14,8 @@ a minute. If the connection drops, the bars flatten out and turn grey, so you ca
 The top of the screen has the date and the temperature. Double tap the watch and it switches over
 to your steps and heart rate for a few seconds, then flips back.
 
-On the round watches the bars wrap around the edge of the screen as tick marks. The red one runs
-all the way round to the top, turns, and comes back the other way.
+On the round watches the bars wrap around the edge of the screen as tick marks. The red one steps
+round once a second, a full lap each minute, then turns at the top and goes back the other way.
 
 ## Battery
 
@@ -24,6 +24,9 @@ to be looking: briefly at each new minute, and for a while after you flick your 
 the time the bars sit still. It won't move at all when your battery is low (20% unless you pick a
 different number in the settings), during quiet time, while a timeline peek covers the screen, or
 if you switch the animation off.
+
+The round watches skip the bursts: the red tick moves once a second, which is cheap, and stops
+under the same conditions.
 
 ## Type
 
