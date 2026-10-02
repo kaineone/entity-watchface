@@ -6,4 +6,4 @@
 - [x] 1.4 README preview sections
 - [x] 1.5 Draft listing
 - [x] 1.6 GPL-3.0-or-later licence; listing shortened (free, no paywall, forks welcome)
-- [ ] 1.7 Owner approves every word of the listing (blocks any publishing)
+- [x] 1.7 Owner approves every word of the listing (blocks any publishing)
