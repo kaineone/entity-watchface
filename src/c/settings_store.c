@@ -8,6 +8,7 @@
 static Settings s_settings;
 static SettingsChangedHandler s_on_change;
 static WeatherReceivedHandler s_on_weather;
+static JsReadyHandler s_on_js_ready;
 
 static bool tuple_is_valid_int(const Tuple *t) {
   return t && (t->type == TUPLE_INT || t->type == TUPLE_UINT) &&
@@ -112,9 +113,15 @@ static void inbox_received_handler(DictionaryIterator *iter, void *context) {
       s_on_weather(cond, temp_c10);
     }
   }
+
+  const Tuple *jr = dict_find(iter, MESSAGE_KEY_JsReady);
+  if (jr && s_on_js_ready) {
+    s_on_js_ready();
+  }
 }
 
-void settings_store_init(SettingsChangedHandler on_change, WeatherReceivedHandler on_weather) {
+void settings_store_init(SettingsChangedHandler on_change, WeatherReceivedHandler on_weather,
+                         JsReadyHandler on_js_ready) {
   Settings tmp;
   int len = persist_read_data(SETTINGS_PERSIST_KEY, &tmp, sizeof(tmp));
   if (len != sizeof(tmp) || !settings_valid(&tmp)) {
@@ -124,6 +131,7 @@ void settings_store_init(SettingsChangedHandler on_change, WeatherReceivedHandle
 
   s_on_change = on_change;
   s_on_weather = on_weather;
+  s_on_js_ready = on_js_ready;
   app_message_register_inbox_received(inbox_received_handler);
   app_message_open(256, 64);
 }

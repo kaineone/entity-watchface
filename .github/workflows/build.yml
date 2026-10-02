@@ -46,6 +46,9 @@ jobs:
       - name: Run JS tests
         run: node tests/js/test_weather.js
 
+      - name: Run JS startup tests
+        run: node tests/js/test_startup.js
+
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: entity-pbw

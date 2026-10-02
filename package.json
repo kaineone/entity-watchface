@@ -41,7 +41,8 @@
       "LowBattery",
       "WeatherCond",
       "WeatherTempC10",
-      "WeatherRequest"
+      "WeatherRequest",
+      "JsReady"
     ],
     "resources": {
       "media": []

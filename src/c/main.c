@@ -159,6 +159,13 @@ static void on_weather_received(int cond, int temp_c10) {
   update_weather();
 }
 
+/* The phone has started: ask for weather if this watch's own reading is missing or old. */
+static void on_js_ready(void) {
+  if (s_show_weather && weather_is_stale((int32_t)time(NULL), s_wx_time, WEATHER_REFRESH_SECS)) {
+    settings_store_request_weather();
+  }
+}
+
 static void update_power(void) {
   char tmp[STATUS_POWER_LEN];
   status_power_text(tmp, sizeof(tmp), s_battery_pct, s_charging);
@@ -726,7 +733,7 @@ static void init(void) {
     .unload = window_unload
   });
 
-  settings_store_init(on_settings_changed, on_weather_received);
+  settings_store_init(on_settings_changed, on_weather_received, on_js_ready);
   apply_settings(settings_store_get(), false);
   load_weather_persist();
 
