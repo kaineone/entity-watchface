@@ -11,5 +11,6 @@ typedef enum { STATUS_GOLD, STATUS_RED, STATUS_ACCENT } StatusInk;
 void status_power_text(char *buf, size_t n, int pct, bool charging);
 StatusInk status_power_ink(int pct, int threshold, bool charging);
 bool status_should_vibrate(bool was_linked, bool now_linked, bool vibe_pref, bool quiet);
+bool status_health_ready(int fw_major, int fw_minor, bool movement_seen);
 
 #endif
