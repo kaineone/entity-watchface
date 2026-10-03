@@ -107,6 +107,17 @@ static bool s_swapped = false;
 static AppTimer *s_swap_timer = NULL;
 static bool s_tap_subscribed = false;
 
+static int s_fw_major = 4, s_fw_minor = 0;
+
+static bool s_health_legacy = false;   /* firmware < 4.9 shows a popup if health is read with Health off */
+static bool s_health_seen = false;     /* a step update proves Health is tracking */
+static bool s_health_subscribed = false;
+
+static void health_handler(HealthEventType event, void *context) {
+  (void)context;
+  if (event == HealthEventMovementUpdate) s_health_seen = true;
+}
+
 static void meter_refresh(void);
 static void start_burst(int frames);
 static void update_tap_subscription(void);
@@ -470,10 +481,12 @@ static void swap_timer_cb(void *data) {
 }
 
 static void swap_in(void) {
-  s_swapped = true;
-
   char tmp[FMT_STEPS_LEN];
   long steps = read_steps();
+  if (steps < 0) return;
+
+  s_swapped = true;
+
   fmt_steps(tmp, sizeof(tmp), steps);
   if (strcmp(s_date_buf, tmp) != 0) {
     strcpy(s_date_buf, tmp);
@@ -483,16 +496,18 @@ static void swap_in(void) {
 #if !defined(PBL_ROUND)
   char wx_tmp[FMT_BPM_LEN];
   long bpm = read_bpm();
-  fmt_bpm(wx_tmp, sizeof(wx_tmp), bpm);
-  if (strcmp(s_weather_buf, wx_tmp) != 0) {
-    strcpy(s_weather_buf, wx_tmp);
-    if (s_weather_layer) text_layer_set_text(s_weather_layer, s_weather_buf);
+  if (bpm > 0) {
+    fmt_bpm(wx_tmp, sizeof(wx_tmp), bpm);
+    if (strcmp(s_weather_buf, wx_tmp) != 0) {
+      strcpy(s_weather_buf, wx_tmp);
+      if (s_weather_layer) text_layer_set_text(s_weather_layer, s_weather_buf);
+    }
+    if (s_weather_layer) {
+      layer_set_hidden(text_layer_get_layer(s_weather_layer), false);
+      text_layer_set_text_color(s_weather_layer, PAL_ACCENT);
+    }
+    s_wx_color_set = false;
   }
-  if (s_weather_layer) {
-    layer_set_hidden(text_layer_get_layer(s_weather_layer), false);
-    text_layer_set_text_color(s_weather_layer, PAL_ACCENT);
-  }
-  s_wx_color_set = false;
 #endif
 
   if (s_swap_timer) app_timer_cancel(s_swap_timer);
@@ -526,7 +541,7 @@ static void handle_tap(AccelAxisType axis, int32_t direction) {
 
   if (s_tap_pref && s_last_tap_ms != 0 && now_ms - s_last_tap_ms <= DOUBLE_TAP_MS) {
     s_last_tap_ms = 0;
-    if (s_swapped) swap_out(); else swap_in();
+    if (s_swapped) swap_out(); else if (status_health_ready(s_fw_major, s_fw_minor, s_health_seen)) swap_in();
   } else {
     s_last_tap_ms = now_ms;
   }
@@ -667,6 +682,15 @@ static void window_load(Window *window) {
   });
 
   update_tap_subscription();
+
+  WatchInfoVersion fw = watch_info_get_firmware_version();
+  s_fw_major = fw.major;
+  s_fw_minor = fw.minor;
+  s_health_legacy = !status_health_ready(s_fw_major, s_fw_minor, false);
+  if (s_health_legacy && !s_health_seen) {
+    s_health_subscribed = health_service_events_subscribe(health_handler, NULL);
+  }
+
   meter_refresh();
   start_burst(BURST_SHORT);
 }
@@ -674,6 +698,10 @@ static void window_load(Window *window) {
 static void window_unload(Window *window) {
   (void)window;
 
+  if (s_health_subscribed) {
+    health_service_events_unsubscribe();
+    s_health_subscribed = false;
+  }
   if (s_swap_timer) {
     app_timer_cancel(s_swap_timer);
     s_swap_timer = NULL;

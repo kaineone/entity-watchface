@@ -57,5 +57,13 @@ int main(void) {
     }
   }
 
+  CHECK_EQ_INT(status_health_ready(4, 9, false), true);
+  CHECK_EQ_INT(status_health_ready(4, 38, false), true);
+  CHECK_EQ_INT(status_health_ready(5, 0, false), true);
+  CHECK_EQ_INT(status_health_ready(4, 4, false), false);
+  CHECK_EQ_INT(status_health_ready(4, 8, false), false);
+  CHECK_EQ_INT(status_health_ready(3, 12, false), false);
+  CHECK_EQ_INT(status_health_ready(4, 4, true), true);
+
   TEST_MAIN_END();
 }
