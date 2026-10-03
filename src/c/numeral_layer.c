@@ -2,7 +2,7 @@
 #include "logic/numeral.h"
 #include "numeral_layer.h"
 
-#define NUMERAL_OUTLINE 2
+#define NUMERAL_OUTLINE 1
 #define SHAPE_BUF_RECTS (NUMERAL_MAX_RECTS + 2 * 12)
 
 typedef struct {
@@ -79,7 +79,7 @@ static void draw_digit_outlined(GContext *ctx, char ch, int x, int y, int w, int
   graphics_context_set_fill_color(ctx, outline_color);
   for (int i = 0; i < m; i++) {
     NumRect r = shapes[i];
-    graphics_fill_rect(ctx, GRect(r.x - 2, r.y - 2, r.w + 4, r.h + 4), 0, GCornerNone);
+    graphics_fill_rect(ctx, GRect(r.x - NUMERAL_OUTLINE, r.y - NUMERAL_OUTLINE, r.w + 2 * NUMERAL_OUTLINE, r.h + 2 * NUMERAL_OUTLINE), 0, GCornerNone);
   }
 
   graphics_context_set_fill_color(ctx, color);
