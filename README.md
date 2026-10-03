@@ -10,8 +10,8 @@ search for Entity in the Pebble app on your phone. It's free.
 
 Most of the screen is the time, in big bold numerals with the hour stacked over the minute. Along
 the bottom is a row of bars that shows whether your watch can reach your phone. Flick your wrist
-and a red bar glides side to side across them, trailing a little orange, then settles after half
-a minute. If the connection drops, the bars flatten out and turn grey, so you can tell at a glance.
+and a red bar glides side to side across them, trailing darker reds, then settles after half a
+minute. Pick a different hour colour in the settings and the bar takes that colour too. If the connection drops, the bars flatten out and turn grey, so you can tell at a glance.
 
 The top of the screen has the date and the temperature. Double tap the watch and it switches over
 to your steps and heart rate for ten seconds, then flips back.
